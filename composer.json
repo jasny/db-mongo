@@ -24,8 +24,8 @@
         "phpunit/phpunit": "3.*"
     },
     "autoload": {
-        "psr-0": {
-            "Jasny\\DB": "src/"
+        "psr-4": {
+            "Jasny\\DB\\Mongo": "src/"
         }
     }
 }

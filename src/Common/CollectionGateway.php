@@ -1,6 +1,6 @@
 <?php
 
-namespace Jasny\DB\Mongo;
+namespace Jasny\DB\Mongo\Common;
 
 /**
  * Static methods to interact with a collection
