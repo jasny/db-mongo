@@ -2,6 +2,8 @@
 
 namespace Jasny\DB\Mongo\Common;
 
+use Jasny\DB\Mongo\DB;
+
 /**
  * Static methods to interact with a collection
  * 
@@ -19,8 +21,8 @@ trait CollectionGateway
      */
     public static function fetch($filter)
     {
-        if ($filter instanceof \MongoId) $query = ['_id' => $query];
-        if (is_string($filter)) $filter = ['_id' => new \MongoId($query)];
+        if ($filter instanceof \MongoId) $query = ['_id' => $filter];
+        if (is_string($filter)) $filter = ['_id' => new \MongoId($filter)];
         
         $query = DB::filterToQuery($filter);
         return static::getCollection()->findOne($query);
@@ -34,8 +36,8 @@ trait CollectionGateway
      */
     public static function exists($filter)
     {
-        if ($filter instanceof \MongoId) $filter = ['_id' => $query];
-        if (is_string($filter)) $filter = ['_id' => new \MongoId($query)];
+        if ($filter instanceof \MongoId) $filter = ['_id' => $filter];
+        if (is_string($filter)) $filter = ['_id' => new \MongoId($filter)];
         
         $query = DB::filterToQuery($filter);
         return static::getCollection()->count($query) > 0;
@@ -51,7 +53,9 @@ trait CollectionGateway
     public static function fetchAll(array $filter=[], $sort=null)
     {
         $query = DB::filterToQuery($filter);
-        return iterator_to_array(static::getCollection()->find($query, [], $sort));
+        
+        $cursor = static::getCollection()->find($query, [], $sort);
+        return array_values(iterator_to_array($cursor));
     }
 
     /**

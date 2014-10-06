@@ -30,6 +30,10 @@ class Collection extends \MongoCollection
      */
     public function __construct(\MongoDB $db, $name, $documentClass = null)
     {
+        if (isset($documentClass) && !is_a($documentClass, 'Jasny\DB\Entity', true)) {
+            throw new \Exception("Class $documentClass is not a Jasny\DB\Entity");
+        }
+        
         $this->documentClass = $documentClass;
         parent::__construct($db, $name);
     }
@@ -154,7 +158,7 @@ class Collection extends \MongoCollection
         if (!isset($this->documentClass)) return $object;
         
         $class = $this->documentClass;
-        return $class::instantiate($object);
+        return $class::__set_state($object);
     }
 
     

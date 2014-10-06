@@ -24,13 +24,23 @@ class DB extends \MongoDB implements Connection, Connection\Namable
     protected $_mongoClient;
     
     /**
-     * @param \MongoClient $conn
-     * @param string       $name
+     * @param \MongoClient|string|array $client
+     * @param string                    $name
      */
-    public function __construct(MongoClient $conn, $name)
+    public function __construct($client, $name = null)
     {
-        parent::__construct($conn, $name);
-        $this->_mongoClient = $conn;
+        if (is_array($client)) {
+            $name = $client['db'];
+            $client = $client['client'];
+        } elseif (is_object($client) && !$client instanceof \MongoClient) {
+            $name = $client->db;
+            $client = $client->client;
+        }
+        
+        if (is_string($client)) $client = new \MongoClient($client);
+        
+        parent::__construct($client, $name);
+        $this->_mongoClient = $client;
     }
     
     /**
@@ -139,5 +149,18 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         }
         
         return $value;
+    }
+    
+    /**
+     * Convert a Jasny DB styled filter to a MongoDB query.
+     * 
+     * @todo Support parameter and check for starting '$'.
+     * 
+     * @param array $filter
+     * @return array
+     */
+    public function filterToQuery($filter)
+    {
+        return $filter;
     }
 }

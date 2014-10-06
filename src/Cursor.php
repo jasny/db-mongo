@@ -1,6 +1,6 @@
 <?php
 
-namespace Jasny\Mongo;
+namespace Jasny\DB\Mongo;
 
 /**
  * MongoDB cursor that produces Records
