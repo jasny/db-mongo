@@ -1,0 +1,32 @@
+{
+    "name": "jasny/db-mongo",
+    "type": "library",
+    "description": "Adds modern OOP DB patterns to the Mongo PHP extension",
+    "keywords": ["database", "db", "mongo", "mongodb"],
+    "license": "MIT",
+    "homepage": "http://jasny.github.com/db-mongo",
+    "authors": [
+        {
+            "name": "Arnold Daniels",
+            "email": "arnold@jasny.net",
+            "homepage": "http://www.jasny.net"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/jasny/db-mongo/issues",
+        "source": "https://github.com/jasny/db-mongo"
+    },
+    "require": {
+        "php": ">=5.4.0",
+        "jasny/db": "dev-master as 2.0.0-alpha",
+        "jasny/meta": "~1.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "3.*"
+    },
+    "autoload": {
+        "psr-0": {
+            "Jasny\\DB": "src/"
+        }
+    }
+}
