@@ -150,15 +150,18 @@ class Collection extends \MongoCollection
      * Convert values to a document
      * 
      * @param array $values
-     * @return Record
+     * @return Entity
      */
     public function asDocument(array $values)
     {
-        $object = $this->db->fromMongoType($values);
-        if (!isset($this->documentClass)) return $object;
+        foreach ($values as &$value) {
+            $value = $this->db->fromMongoType($value);
+        }
+        
+        if (!isset($this->documentClass)) return (object)$values;
         
         $class = $this->documentClass;
-        return $class::__set_state($object);
+        return $class::__set_state($values);
     }
 
     

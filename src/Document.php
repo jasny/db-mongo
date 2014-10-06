@@ -20,7 +20,9 @@ abstract class Document implements
 {
     use Entity\Basics,
         Entity\LazyLoading,
-        Common\CollectionGateway;
+        Common\CollectionGateway {
+            Entity\LazyLoading::ghost as createGhost;
+    }
 
     
     /**
@@ -98,6 +100,20 @@ abstract class Document implements
         return $this;
     }
     
+    
+    /**
+     * Create a ghost object.
+     * 
+     * @param mixed|array $values  Unique ID or values
+     * @return static
+     */
+    public static function ghost($values)
+    {
+        if (is_string($values)) $values = ['_id' => new \MongoId($values)];
+        if ($values instanceof \MongoId) $values = ['_id' => $values];
+        
+        return self::createGhost($values);
+    }
     
     /**
      * Prepare result when casting object to JSON
