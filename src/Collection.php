@@ -3,7 +3,11 @@
 namespace Jasny\DB\Mongo;
 
 /**
- * MongoDB Collection which produces Document objects
+ * Mongo collection which produces Document objects
+ * 
+ * @author  Arnold Daniels <arnold@jasny.net>
+ * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
+ * @link    https://jasny.github.io/db-mongo
  */
 class Collection extends \MongoCollection
 {

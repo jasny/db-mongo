@@ -1,13 +1,13 @@
 <?php
 
-namespace DB;
-
-use DB;
+namespace Jasny\Mongo;
 
 /**
  * MongoDB cursor that produces Records
  * 
- * @internal Intended as part of Jasny\DB. However version 2 isn't stable enough, so adding this lib standalone.
+ * @author  Arnold Daniels <arnold@jasny.net>
+ * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
+ * @link    https://jasny.github.io/db-mongo
  */
 class Cursor extends \MongoCursor
 {
