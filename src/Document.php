@@ -2,7 +2,10 @@
 
 namespace Jasny\DB\Mongo;
 
-use \Jasny\DB\Entity, Jasny\DB\Recordset;
+use Jasny\DB\Entity,
+    Jasny\DB\Recordset,
+    Jasny\DB\FieldMapping,
+    Jasny\DB\FieldMap;
 
 /**
  * Base class for a Mongo document.
@@ -15,21 +18,17 @@ abstract class Document implements
     Entity,
     Entity\Identifiable,
     Entity\ActiveRecord,
-    Entity\LazyLoadable,
-    Recordset
+    Entity\LazyLoading,
+    Recordset,
+    FieldMapping
 {
     use Entity\Basics,
-        Entity\LazyLoading,
+        Entity\SimpleLazyLoading,
+        FieldMap,
         Common\CollectionGateway {
-            Entity\LazyLoading::ghost as createGhost;
-    }
-
-    
-    /**
-     * Indexes to create on the collection.
-     * @var array
-     */
-    static protected $indexes;
+            Entity\Basics::instantiate as protected instantiateEntity;
+            Entity\SimpleLazyLoading::ghost as protected createGhost;
+        }
     
     
     /**
@@ -40,7 +39,18 @@ abstract class Document implements
     
     
     /**
-     * Get the Mongo collection
+     * Get the database connection
+     * 
+     * @return DB
+     */
+    protected static function getDB()
+    {
+        return \Jasny\DB::conn();
+    }
+    
+    /**
+     * Get the Mongo collection.
+     * Uses the static `$collection` property if available, otherwise guesses based on class name.
      * 
      * @return Collection
      */
@@ -53,11 +63,19 @@ abstract class Document implements
             $name = strtolower(preg_replace('/(?<=[a-z])([A-Z])(?![A-Z])/', '_$1', $class)); // snake_case
         }
         
-        $collection = DB::conn()->selectCollection($name , get_called_class());
-        if (isset(static::$indexes)) $collection->createIndexes(static::$indexes);
-        
-        return $collection;
+        return static::getDB()->selectCollection($name , get_called_class());
     }
+    
+    /**
+     * Get the field map.
+     * 
+     * @return array
+     */
+    protected static function getFieldMap()
+    {
+        return [];
+    }
+    
     
     /**
      * Constructor
@@ -79,13 +97,32 @@ abstract class Document implements
     }
 
     /**
+     * Get the data that needs to be saved in the DB
+     * 
+     * @return array
+     */
+    protected function toData()
+    {
+        $values = static::mapToFields($this->getValues());
+        
+        if (property_exists(get_called_class(), '_sort')) {
+            $values['_sort'] = strtolower(iconv("UTF-8", "ASCII//TRANSLIT", (string)$this));
+        }
+        
+        return $values;
+    }
+    
+    /**
      * Save the document
      * 
      * @return $this
      */
     public function save()
     {
-        static::getCollection()->save($this);
+        if ($this->isGhost()) throw new \Exception("Unable to save: This " . get_called_class() . " entity " .
+            "isn't fully loaded. First expand, than edit, than save.");
+        
+        static::getCollection()->save($this->toData());
         return $this;
     }
     
@@ -96,7 +133,7 @@ abstract class Document implements
      */
     public function delete()
     {
-        static::getCollection()->delete($this);
+        static::getCollection()->delete($this->_id);
         return $this;
     }
     
@@ -116,12 +153,25 @@ abstract class Document implements
     }
     
     /**
+     * Convert loaded values to an entity
+     * 
+     * @param array $values
+     */
+    public static function instantiate($values)
+    {
+        $props = static::mapFromFields($values);
+        return static::instantiateEntity($props);
+    }
+    
+    /**
      * Prepare result when casting object to JSON
      * 
      * @return object
      */
     public function jsonSerialize()
     {
+        $this->expand();
+        
         $values = $this->getValues();
         
         foreach ($values as &$value) {
@@ -129,6 +179,7 @@ abstract class Document implements
             if ($value instanceof \MongoId) $value = (string)$value;
         }
         
+        unset($values['_sort']);
         return (object)$values;
     }
 }

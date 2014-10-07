@@ -2,7 +2,7 @@
 
 namespace Jasny\DB\Mongo;
 
-use Jasny\DB\DataMapper, Jasny\DB\Recordset;
+use Jasny\DB\DataMapper as DataMapperInterface, Jasny\DB\Recordset, Jasny\DB\FieldMapping, Jasny\DB\FieldMap;
 
 /**
  * Data Mapper for fetching and storing entities using Mongo.
@@ -11,15 +11,26 @@ use Jasny\DB\DataMapper, Jasny\DB\Recordset;
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-abstract class DataMapper implements DataMapper, Recordset
+abstract class DataMapper implements DataMapperInterface, Recordset, FieldMapping
 {
-    use Common\CollectionGateway;
+    use Common\CollectionGateway, FieldMap;
     
     /**
      * Indexes to create on the collection.
      * @var array
      */
     static protected $indexes;
+
+    /**
+     * Get the field map.
+     * Uses static property `$fieldMap`.
+     * 
+     * @return array
+     */
+    protected static function getFieldMap()
+    {
+        return isset(static::$fieldMap) ? static::$fieldMap : [];
+    }
     
     /**
      * Get the Mongo collection

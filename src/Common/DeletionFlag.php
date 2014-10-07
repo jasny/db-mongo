@@ -48,7 +48,7 @@ trait DeletionFlag
      * @param array $sort
      * @return static[]
      */
-    public static function fetchAll(array $filter=[], $sort=null)
+    public static function fetchAll(array $filter = [], $sort = null)
     {
         $filter['_deleted'] = false;
         return parent::fetchAll($filter, $sort);
@@ -61,7 +61,7 @@ trait DeletionFlag
      * @param array $sort
      * @return static[]
      */
-    public static function fetchDeleted(array $filter=[], $sort=null)
+    public static function fetchDeleted(array $filter = [], $sort = null)
     {
         $filter['_deleted'] = true;
         return parent::fetchAll($filter, $sort);
@@ -84,7 +84,7 @@ trait DeletionFlag
      * @param array $filter
      * @return static[]
      */
-    public static function countDeleted(array $filter=[])
+    public static function countDeleted(array $filter = [])
     {
         $filter['_deleted'] = true;
         return parent::count($filter, $sort);

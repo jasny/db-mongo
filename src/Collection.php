@@ -161,7 +161,7 @@ class Collection extends \MongoCollection
         if (!isset($this->documentClass)) return (object)$values;
         
         $class = $this->documentClass;
-        return $class::__set_state($values);
+        return $class::instantiate($values);
     }
 
     

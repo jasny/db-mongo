@@ -24,7 +24,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
     protected $_mongoClient;
     
     /**
-     * @param \MongoClient|string|array $client
+     * @param \MongoClient|string|array $client  Client or settings
      * @param string                    $name
      */
     public function __construct($client, $name = null)
@@ -89,15 +89,11 @@ class DB extends \MongoDB implements Connection, Connection\Namable
      */
     protected static function propertyToMongoType($value)
     {
-        if (isset($value->_id) && $value->_id instanceof \MongoId) {
-            return $value->_id;
-        }
-        
-        if (is_array($value) && count($value) === 1 && key($value) === '$id') {
-            return new \MongoId($value['$id']);
-        }
-        
         if ($value instanceof Entity\Identifiable) {
+            if (isset($value->_id) && $value->_id instanceof \MongoId) {
+                return $value->_id;
+            }
+            
             return $value->getId();
         }
         
@@ -159,8 +155,23 @@ class DB extends \MongoDB implements Connection, Connection\Namable
      * @param array $filter
      * @return array
      */
-    public function filterToQuery($filter)
+    public static function filterToQuery($filter)
     {
+        foreach ($filter as &$value) {
+            $value = static::propertyToMongoType($value);
+        }
+        
         return $filter;
+    }
+    
+    /**
+     * Get's a collection
+     * 
+     * @param string $name
+     * @return Collection
+     */
+    public function __get($name)
+    {
+        return $this->selectCollection($name);
     }
 }

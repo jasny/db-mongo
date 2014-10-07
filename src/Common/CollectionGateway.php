@@ -21,10 +21,10 @@ trait CollectionGateway
      */
     public static function fetch($filter)
     {
-        if ($filter instanceof \MongoId) $query = ['_id' => $filter];
+        if ($filter instanceof \MongoId) $filter = ['_id' => $filter];
         if (is_string($filter)) $filter = ['_id' => new \MongoId($filter)];
         
-        $query = DB::filterToQuery($filter);
+        $query = static::filterToQuery($filter);
         return static::getCollection()->findOne($query);
     }
     
@@ -39,8 +39,8 @@ trait CollectionGateway
         if ($filter instanceof \MongoId) $filter = ['_id' => $filter];
         if (is_string($filter)) $filter = ['_id' => new \MongoId($filter)];
         
-        $query = DB::filterToQuery($filter);
-        return static::getCollection()->count($query) > 0;
+        $query = static::filterToQuery($filter);
+        return (boolean)static::getCollection()->count($query, 1);
     }
     
     /**
@@ -50,9 +50,10 @@ trait CollectionGateway
      * @param array $sort
      * @return static[]
      */
-    public static function fetchAll(array $filter=[], $sort=null)
+    public static function fetchAll(array $filter = [], $sort = null)
     {
-        $query = DB::filterToQuery($filter);
+        $query = static::filterToQuery($filter);
+        if (!isset($sort) && property_exists(get_called_class(), '_sort')) $sort = ['_sort' => DB::ASCENDING];
         
         $cursor = static::getCollection()->find($query, [], $sort);
         return array_values(iterator_to_array($cursor));
@@ -65,7 +66,7 @@ trait CollectionGateway
      * @param array $sort
      * @return static[]
      */
-    public static function fetchList(array $filter=[], $sort=null)
+    public static function fetchList(array $filter = [], $sort = null)
     {
         $list = [];
         foreach (static::fetchAll($filter, $sort) as $record) {
@@ -80,9 +81,21 @@ trait CollectionGateway
      * 
      * @param array $filter
      */
-    public static function count(array $filter)
+    public static function count(array $filter = [])
+    {
+        $query = static::filterToQuery($filter);
+        return static::getCollection()->count($query);
+    }
+    
+    /**
+     * Convert a Jasny DB styled filter to a MongoDB query.
+     * 
+     * @param array $filter
+     * @return array
+     */
+    public static function filterToQuery($filter)
     {
         $query = DB::filterToQuery($filter);
-        return static::getCollection()->count($query);
+        return static::mapToFields($query);
     }
 }
