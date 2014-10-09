@@ -25,11 +25,13 @@ trait CollectionGateway
             return ['_id' => $id->_id];
         
         if ($id instanceof \MongoId) return ['_id' => $id];
-        if (is_string($id)) {
-            return ctype_xdigit($id) && strlen($id) === 24 ? ['_id' => new \MongoId($id)] : null;
-        }
+
+        if (is_object($id) || is_array($id)) return $id;
         
-        return $id;
+        if (is_string($id) && ctype_xdigit($id) && strlen($id) === 24) return ['_id' => new \MongoId($id)];
+        
+        trigger_error("Invalid MongoID '$id'", E_USER_NOTICE);
+        return null;
     }
     
     /**
