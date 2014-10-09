@@ -26,7 +26,7 @@ trait CollectionGateway
         
         if ($id instanceof \MongoId) return ['_id' => $id];
         if (is_string($id)) {
-            return ctype_xdigit($id) ? ['_id' => new \MongoId($id)] : null;
+            return ctype_xdigit($id) && strlen($id) === 24 ? ['_id' => new \MongoId($id)] : null;
         }
         
         return $id;
