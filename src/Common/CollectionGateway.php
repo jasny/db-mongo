@@ -14,15 +14,34 @@ use Jasny\DB\Mongo\DB;
 trait CollectionGateway
 {
     /**
+     * Convert ID to a filter
+     * 
+     * @param string|array $id  ID or filter
+     * @return array
+     */
+    protected static function idToFilter($id)
+    {
+        if ($id instanceof \Jasny\DB\Entity && isset($id->_id) && $id->_id instanceof \MongoId)
+            return ['_id' => $id->_id];
+        
+        if ($id instanceof \MongoId) return ['_id' => $id];
+        if (is_string($id)) {
+            return ctype_xdigit($id) ? ['_id' => new \MongoId($id)] : null;
+        }
+        
+        return $id;
+    }
+    
+    /**
      * Fetch a document.
      * 
-     * @param string|array $filter  ID or filter
+     * @param string|array $id  ID or filter
      * @return static
      */
-    public static function fetch($filter)
+    public static function fetch($id)
     {
-        if ($filter instanceof \MongoId) $filter = ['_id' => $filter];
-        if (is_string($filter)) $filter = ['_id' => new \MongoId($filter)];
+        $filter = static::idToFilter($id);
+        if (!isset($filter)) return null;
         
         $query = static::filterToQuery($filter);
         return static::getCollection()->findOne($query);
@@ -31,13 +50,13 @@ trait CollectionGateway
     /**
      * Check if a document exists.
      * 
-     * @param string|array $filter  ID or filter
+     * @param string|array $id  ID or filter
      * @return boolean
      */
-    public static function exists($filter)
+    public static function exists($id)
     {
-        if ($filter instanceof \MongoId) $filter = ['_id' => $filter];
-        if (is_string($filter)) $filter = ['_id' => new \MongoId($filter)];
+        $filter = static::idToFilter($id);
+        if (!isset($filter)) return null;
         
         $query = static::filterToQuery($filter);
         return (boolean)static::getCollection()->count($query, 1);
