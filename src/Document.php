@@ -2,7 +2,8 @@
 
 namespace Jasny\DB\Mongo;
 
-use Jasny\DB\Entity,
+use Jasny\DB,
+    Jasny\DB\Entity,
     Jasny\DB\Recordset,
     Jasny\DB\FieldMapping,
     Jasny\DB\FieldMap;
@@ -26,8 +27,8 @@ abstract class Document implements
         Entity\SimpleLazyLoading,
         FieldMap,
         Common\CollectionGateway {
-            Entity\Basics::instantiate as protected instantiateEntity;
-            Entity\SimpleLazyLoading::ghost as protected createGhost;
+            Entity\Basics::fromData as private entityFromData;
+            Entity\SimpleLazyLoading::lazyload as private lazyloadEntity;
         }
     
     
@@ -41,11 +42,11 @@ abstract class Document implements
     /**
      * Get the database connection
      * 
-     * @return DB
+     * @return \Jasny\DB
      */
     protected static function getDB()
     {
-        return \Jasny\DB::conn();
+        return DB::conn();
     }
     
     /**
@@ -144,12 +145,12 @@ abstract class Document implements
      * @param mixed|array $values  Unique ID or values
      * @return static
      */
-    public static function ghost($values)
+    public static function lazyload($values)
     {
         if (is_string($values)) $values = ['_id' => new \MongoId($values)];
         if ($values instanceof \MongoId) $values = ['_id' => $values];
         
-        return self::createGhost($values);
+        return self::lazyloadEntity($values);
     }
     
     /**
@@ -157,10 +158,10 @@ abstract class Document implements
      * 
      * @param array $values
      */
-    public static function instantiate($values)
+    public static function fromData($values)
     {
         $props = static::mapFromFields($values);
-        return static::instantiateEntity($props);
+        return static::entityFromData($props);
     }
     
     /**

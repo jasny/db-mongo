@@ -44,7 +44,7 @@ trait CollectionGateway
     {
         $filter = static::idToFilter($id);
         if (!isset($filter)) return null;
-        
+
         $query = static::filterToQuery($filter);
         return static::getCollection()->findOne($query);
     }
