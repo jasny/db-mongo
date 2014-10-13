@@ -134,7 +134,7 @@ abstract class Document implements
      */
     public function delete()
     {
-        static::getCollection()->delete($this->_id);
+        static::getCollection()->remove(['_id' => $this->_id]);
         return $this;
     }
     
