@@ -1,6 +1,6 @@
 <?php
 
-namespace Jasny\DB\Mongo;
+namespace Jasny\DB\Mongo\Document;
 
 /**
  * Implementation of soft deletion using a flag (for documents).

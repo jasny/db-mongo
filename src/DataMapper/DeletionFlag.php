@@ -1,8 +1,9 @@
 <?php
 
-namespace Jasny\DB\Mongo;
+namespace Jasny\DB\Mongo\DataMapper;
 
-use Jasny\DB\Entity;
+use Jasny\DB\Entity,
+    Jasny\DB\Mongo\Common;
 
 /**
  * Implementation of soft deletion using a flag (for documents).
@@ -13,7 +14,7 @@ use Jasny\DB\Entity;
  */
 trait DeletionFlag
 {
-    use \Jasny\DB\Mongo\Common\DeletionFlag;
+    use Common\DeletionFlag;
     
     /**
      * Check if document is flagged as deleted
@@ -24,7 +25,7 @@ trait DeletionFlag
     public static function isDeleted(Entity $document)
     {
         if (isset($document->_deleted)) return $document->_deleted;
-        return static::getCollection()->count(['_id' => $document->_id, '_deleted' => true]);
+        return static::getCollection()->count(['_id' => $document->_id, '_deleted' => true]) > 0;
     }
     
     /**

@@ -1,6 +1,6 @@
 <?php
 
-namespace Jasny\DB\Mongo;
+namespace Jasny\DB\Mongo\Common;
 
 /**
  * Implementation of soft deletion and trash using a deletion flag (common methods).
@@ -12,46 +12,27 @@ namespace Jasny\DB\Mongo;
 trait DeletionFlag
 {
     /**
-     * Fetch a document.
+     * Return filter defaults
      * 
-     * @param string|array $filter  ID or filter
+     * @return array
+     */
+    protected static function getFilterDefaults()
+    {
+        return ['_deleted' => null];
+    }
+    
+    /**
+     * Fetch a deleted document.
+     * 
+     * @param string|\MongoID|array $id  ID or filter
      * @return static
      */
-    public static function fetch($filter)
+    public static function fetchDeleted($id)
     {
-        if ($filter instanceof \MongoId) $query = ['_id' => $query];
-        if (is_string($filter)) $filter = ['_id' => new \MongoId($query)];
-
-        $filter['_deleted'] = false;
-        return parent::fetch($filter);
-    }
-    
-    /**
-     * Check if a document exists.
-     * 
-     * @param string|array $filter  ID or filter
-     * @return boolean
-     */
-    public static function exists($filter)
-    {
-        if ($filter instanceof \MongoId) $query = ['_id' => $query];
-        if (is_string($filter)) $filter = ['_id' => new \MongoId($query)];
+        $filter = static::idToFilter($id);
+        $filter['_deleted'] = true;
         
-        $filter['_deleted'] = false;
-        return parent::exists($filter);
-    }
-    
-    /**
-     * Fetch all documents.
-     * 
-     * @param array $filter
-     * @param array $sort
-     * @return static[]
-     */
-    public static function fetchAll(array $filter = [], $sort = null)
-    {
-        $filter['_deleted'] = false;
-        return parent::fetchAll($filter, $sort);
+        return static::fetch($filter);
     }
     
     /**
@@ -61,23 +42,12 @@ trait DeletionFlag
      * @param array $sort
      * @return static[]
      */
-    public static function fetchDeleted(array $filter = [], $sort = null)
+    public static function fetchAllDeleted(array $filter = [], $sort = null)
     {
         $filter['_deleted'] = true;
-        return parent::fetchAll($filter, $sort);
+        return static::fetchAll($filter, $sort);
     }
 
-    /**
-     * Count all documents in the collection
-     * 
-     * @param array $filter
-     */
-    public static function count(array $filter)
-    {
-        $filter['_deleted'] = false;
-        return parent::count($filter, $sort);
-    }
-    
     /**
      * Count all deleted documents in the collection
      * 
@@ -87,7 +57,7 @@ trait DeletionFlag
     public static function countDeleted(array $filter = [])
     {
         $filter['_deleted'] = true;
-        return parent::count($filter, $sort);
+        return parent::count($filter);
     }
     
     /**

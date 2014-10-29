@@ -5,7 +5,7 @@ namespace Jasny\DB\Mongo\Common;
 use Jasny\DB\Mongo\DB;
 
 /**
- * Static methods to interact with a collection
+ * Static methods to interact with a collection (as both document and data mapper)
  * 
  * @author  Arnold Daniels <arnold@jasny.net>
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
@@ -13,6 +13,55 @@ use Jasny\DB\Mongo\DB;
  */
 trait CollectionGateway
 {
+    /**
+     * Get the database connection
+     * 
+     * @return DB
+     */
+    protected static function getDB()
+    {
+        return \Jasny\DB::conn();
+    }
+    
+    /**
+     * Get the document class
+     * 
+     * @return string
+     */
+    protected static function getDocumentClass()
+    {
+        return get_called_class();
+    }
+    
+    /**
+     * Get the Mongo collection.
+     * Uses the static `$collection` property if available, otherwise guesses based on class name.
+     * 
+     * @return Collection
+     */
+    protected static function getCollection()
+    {
+        if (isset(static::$collection)) {
+            $name = static::$collection;
+        } else {
+            $class = preg_replace('/^.+\\\\/', '', get_called_class());
+            $name = strtolower(preg_replace('/(?<=[a-z])([A-Z])(?![A-Z])/', '_$1', $class)); // snake_case
+        }
+        
+        return static::getDB()->selectCollection($name , static::getDocumentClass());
+    }
+    
+    
+    /**
+     * Return filter defaults
+     * 
+     * @return array
+     */
+    protected static function getFilterDefaults()
+    {
+        return [];
+    }
+    
     /**
      * Convert ID to a filter
      * 
@@ -42,7 +91,7 @@ trait CollectionGateway
      */
     public static function fetch($id)
     {
-        $filter = static::idToFilter($id);
+        $filter = static::idToFilter($id) ;
         if (!isset($filter)) return null;
 
         $query = static::filterToQuery($filter);
@@ -74,7 +123,10 @@ trait CollectionGateway
     public static function fetchAll(array $filter = [], $sort = null)
     {
         $query = static::filterToQuery($filter);
-        if (!isset($sort) && property_exists(get_called_class(), '_sort')) $sort = ['_sort' => DB::ASCENDING];
+        
+        if (!isset($sort) && is_a(get_called_class(), 'Jasny\DB\Mongo\Sorted', true)) {
+            $sort = [static::getDefaultSortField() => DB::ASCENDING];
+        }
         
         $cursor = static::getCollection()->find($query, [], $sort);
         return array_values(iterator_to_array($cursor));
@@ -101,6 +153,7 @@ trait CollectionGateway
      * Count all documents in the collection
      * 
      * @param array $filter
+     * @return int
      */
     public static function count(array $filter = [])
     {
@@ -108,15 +161,23 @@ trait CollectionGateway
         return static::getCollection()->count($query);
     }
     
+    
     /**
      * Convert a Jasny DB styled filter to a MongoDB query.
      * 
      * @param array $filter
      * @return array
      */
-    public static function filterToQuery($filter)
+    protected static function filterToQuery($filter)
     {
+        $filter += static::getFilterDefaults();
+        
+        if (is_a(get_called_class(), 'Jasny\DB\FieldMapping', true)) {
+            $filter = static::mapToFields($filter);
+        }
+
         $query = DB::filterToQuery($filter);
-        return static::mapToFields($query);
+        
+        return $query;
     }
 }
