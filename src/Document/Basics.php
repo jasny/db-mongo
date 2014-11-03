@@ -4,7 +4,8 @@ namespace Jasny\DB\Mongo\Document;
 
 use Jasny\DB\FieldMapping,
     Jasny\DB\Mongo\Common,
-    Jasny\DB\Entity;
+    Jasny\DB\Entity,
+    Jasny\DB\Mongo\Sorted;
 
 /**
  * Static methods to interact with a collection (as document)
