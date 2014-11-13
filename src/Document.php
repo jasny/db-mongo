@@ -13,7 +13,7 @@ use Jasny\DB\Entity,
  * Full implementation for Mongo documents as Active Record
  */
 abstract class Document implements
-    Mongo\Document,
+    Document\ActiveRecord,
     Entity\LazyLoading,
     Mongo\Sorted,
     Introspection,
