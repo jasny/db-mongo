@@ -18,7 +18,8 @@
     },
     "require": {
         "php": ">=5.4.0",
-        "jasny/db": "~2.0@beta"
+        "jasny/db": "~2.0@beta",
+        "jasny/meta": "~1.2.0"
     },
     "require-dev": {
         "phpunit/phpunit": "3.*"

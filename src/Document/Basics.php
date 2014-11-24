@@ -82,6 +82,18 @@ trait Basics
         return $this;
     }
 
+    /**
+     * Check no other document with the same value of the property exists
+     * 
+     * @param string $property
+     * @return boolean
+     */
+    public function hasUnique($property)
+    {
+        if (!isset($this->$property)) return true;
+        return !static::exists(['_id !=' => $this->_id, $property => $this->$property]);
+    }
+    
     
     /**
      * Prepare result when casting object to JSON

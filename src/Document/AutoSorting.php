@@ -2,6 +2,8 @@
 
 namespace Jasny\DB\Mongo\Document;
 
+use Jasny\DB\Mongo\DB;
+
 /**
  * Prepare the document to be sorted by casting it to a string
  * 
@@ -16,11 +18,11 @@ trait AutoSorting
     /**
      * Get the field to sort on
      * 
-     * @return string
+     * @return array
      */
-    public function getDefaultSortField()
+    public static function getDefaultSorting()
     {
-        return '_sort';
+        return ['_sort' => DB::ASCENDING];
     }
     
     /**

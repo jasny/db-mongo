@@ -120,12 +120,12 @@ trait CollectionGateway
      * @param array $sort
      * @return static[]
      */
-    public static function fetchAll(array $filter = [], $sort = null)
+    public static function fetchAll(array $filter = [], $sort = [])
     {
         $query = static::filterToQuery($filter);
         
-        if (!isset($sort) && is_a(get_called_class(), 'Jasny\DB\Mongo\Sorted', true)) {
-            $sort = [static::getDefaultSortField() => DB::ASCENDING];
+        if (is_a(get_called_class(), 'Jasny\DB\Mongo\Sorted', true)) {
+            $sort += static::getDefaultSorting();
         }
         
         $cursor = static::getCollection()->find($query, [], $sort);

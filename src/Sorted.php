@@ -16,5 +16,5 @@ interface Sorted
      * 
      * @return string
      */
-    public static function getDefaultSortField();
+    public static function getDefaultSorting();
 }

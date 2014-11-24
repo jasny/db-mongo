@@ -1,6 +1,6 @@
 <?php
 
-namespace Jasny\DB\Mongo;
+namespace Jasny\DB\Mongo\Document;
 
 use Jasny\DB\Entity,
     Jasny\DB\Recordset;
@@ -12,5 +12,10 @@ use Jasny\DB\Entity,
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-interface Document extends Entity, Entity\Identifiable, Entity\ActiveRecord, Recordset
+interface ActiveRecord extends
+    Entity,
+    Entity\Identifiable,
+    Entity\ActiveRecord,
+    Entity\UniqueProperties,
+    Recordset
 { }
