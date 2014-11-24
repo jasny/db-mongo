@@ -156,31 +156,23 @@ class DB extends \MongoDB implements Connection, Connection\Namable
     {
         $query = [];
         
-        foreach ($filter as $key => $value) {
+        foreach ($filter as $key => $filterVal) {
             if ($key[0] === '$') throw new \Exception("Invalid filter key '$key'. Starting with '$' isn't allowed.");
             
-            list($field, $operator) = explode(' ', $key, 2) + [1 => '='];
-            $value = static::propertyToMongoType($value);
+            list($field, $operator) = array_map('trim', explode('(', str_replace(')', '', $key))) + [1 => null];
+            $value = static::propertyToMongoType($filterVal);
             
             switch ($operator) {
-                case '=':
-                case '==':
-                case '{has}':  $query[$field] = $value; break;
-                case '!=': 
-                case '<>':
-                case '{!has}': $query[$field] = ['$ne' => $value]; break;
-                case '>':      $query[$field] = ['$gte' => $value]; break;
-                case '>=':     $query[$field] = ['$ge' => $value]; break;
-                case '<':      $query[$field] = ['$lte' => $value]; break;
-                case '<=':     $query[$field] = ['$le' => $value]; break;
-                case '{any}':  $query[$field] = ['$in' => $value]; break;
-                case '{!any}': $query[$field] = ['$nin' => $value]; break;
-                case '{all}':  $query[$field] = ['$all' => $value]; break;
-                case '{!all}': $query[$field] = ['$not' => ['$all' => $value]]; break;
+                case '':     $query[$field] = $value; break;
+                case 'not':  $query[$field] = ['$ne' => $value]; break;
+                case 'min':  $query[$field] = ['$gte' => $value]; break;
+                case 'max':  $query[$field] = ['$lte' => $value]; break;
+                case 'any':  $query[$field] = ['$in' => $value]; break;
+                case 'none': $query[$field] = ['$nin' => $value]; break;
+                case 'all':  $query[$field] = ['$all' => $value]; break;
             
                 default: throw new \Exception("Invalid filter key '$key'. Unknown operator '$operator'.");
             }
-            
         }
         
         return $query;
