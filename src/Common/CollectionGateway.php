@@ -116,11 +116,12 @@ trait CollectionGateway
     /**
      * Fetch all documents.
      * 
-     * @param array $filter
-     * @param array $sort
+     * @param array     $filter
+     * @param array     $sort
+     * @param int|array $limit  Limit or [limit, offset]
      * @return static[]
      */
-    public static function fetchAll(array $filter = [], $sort = [])
+    public static function fetchAll(array $filter = [], $sort = [], $limit = null)
     {
         $query = static::filterToQuery($filter);
         
@@ -128,21 +129,24 @@ trait CollectionGateway
             $sort += static::getDefaultSorting();
         }
         
-        $cursor = static::getCollection()->find($query, [], $sort);
+        if (isset($limit)) list($limit, $offset) = (array)$limit + [null, null];
+        
+        $cursor = static::getCollection()->find($query, [], $sort, $limit, $offset);
         return array_values(iterator_to_array($cursor));
     }
 
     /**
      * Fetch all descriptions.
      * 
-     * @param array $filter
-     * @param array $sort
-     * @return static[]
+     * @param array     $filter
+     * @param array     $sort
+     * @param int|array $limit  Limit or [limit, offset]
+     * @return array
      */
-    public static function fetchList(array $filter = [], $sort = null)
+    public static function fetchList(array $filter = [], $sort = [], $limit = null)
     {
         $list = [];
-        foreach (static::fetchAll($filter, $sort) as $record) {
+        foreach (static::fetchAll($filter, $sort, $limit) as $record) {
             $list[$record->getId()] = (string)$record;
         }
         
