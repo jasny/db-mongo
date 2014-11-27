@@ -129,7 +129,7 @@ trait CollectionGateway
             $sort += static::getDefaultSorting();
         }
         
-        if (isset($limit)) list($limit, $offset) = (array)$limit + [null, null];
+        list($limit, $offset) = (array)$limit + [null, null];
         
         $cursor = static::getCollection()->find($query, [], $sort, $limit, $offset);
         return array_values(iterator_to_array($cursor));
