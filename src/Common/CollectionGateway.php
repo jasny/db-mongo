@@ -129,9 +129,9 @@ trait CollectionGateway
             $sort += static::getDefaultSorting();
         }
         
-        list($limit, $offset) = (array)$limit + [null, null];
+        list($lmt, $offset) = (array)$limit + [null, null];
         
-        $cursor = static::getCollection()->find($query, [], $sort, $limit, $offset);
+        $cursor = static::getCollection()->find($query, [], $sort, $lmt, $offset);
         return array_values(iterator_to_array($cursor));
     }
 
