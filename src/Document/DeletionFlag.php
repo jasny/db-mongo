@@ -17,7 +17,7 @@ trait DeletionFlag
      * The document is deleted
      * @var boolean
      */
-    public $_deleted = false;
+    public $_deleted = null;
     
     /**
      * Check if document is flagged as deleted

@@ -91,7 +91,7 @@ trait Basics
     public function hasUnique($property)
     {
         if (!isset($this->$property)) return true;
-        return !static::exists(['_id !=' => $this->_id, $property => $this->$property]);
+        return !static::exists(['_id(not)' => $this->_id, $property => $this->$property]);
     }
     
     

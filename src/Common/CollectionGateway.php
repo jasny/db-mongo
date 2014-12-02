@@ -91,7 +91,7 @@ trait CollectionGateway
      */
     public static function fetch($id)
     {
-        $filter = static::idToFilter($id) ;
+        $filter = static::idToFilter($id);
         if (!isset($filter)) return null;
 
         $query = static::filterToQuery($filter);
@@ -126,7 +126,7 @@ trait CollectionGateway
         $query = static::filterToQuery($filter);
         
         if (is_a(get_called_class(), 'Jasny\DB\Mongo\Sorted', true)) {
-            $sort += static::getDefaultSorting();
+            $sort = (array)$sort + static::getDefaultSorting();
         }
         
         list($lmt, $offset) = (array)$limit + [null, null];
