@@ -52,8 +52,8 @@ trait DeletionFlag
     public function undelete()
     {
         if ($this->_deleted) {
-            static::getCollection()->update(['_id' => $this->_id], ['$set' => ['_deleted' => false]]);
-            $this->_deleted = false;
+            static::getCollection()->update(['_id' => $this->_id], ['$set' => ['_deleted' => null]]);
+            $this->_deleted = null;
         }
         
         return $this;
