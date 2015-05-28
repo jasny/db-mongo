@@ -29,11 +29,16 @@ class DB extends \MongoDB implements Connection, Connection\Namable
      */
     public function __construct($client, $name = null)
     {
-        if (is_array($client)) $client = (object)$client;
-        
-        if (is_object($client) && !$client instanceof \MongoClient) {
-            $name = isset($client->database) ? $client->database : null;
-            $client = $client->client;
+        if (is_array($client) || (is_object($client) && !$client instanceof \MongoClient)) {
+            $options = (array)$client;
+            $name = isset($options['database']) ? $options['database'] : null;
+            
+            $server = $options['client'];
+            if (!strpos($options['client'], '/') && isset($name)) $server .= '/' . $name;
+            
+            unset($options['client'], $options['database']);
+            
+            $client = new \MongoClient($server, $options);
         }
         
         if (is_string($client)) $client = new \MongoClient($client);
