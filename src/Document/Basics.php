@@ -13,7 +13,7 @@ use Jasny\DB\Entity,
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-trait Implementation
+trait Basics
 {
     use Entity\Implementation,
         FieldMapping\Implementation,
@@ -75,9 +75,10 @@ trait Implementation
     /**
      * Save the document
      * 
+     * @param array $opts
      * @return $this
      */
-    public function save()
+    public function save(array $opts = [])
     {
         if ($this instanceof Entity\LazyLoading && $this->isGhost()) {
             $msg = "This " . get_called_class() . " entity isn't fully loaded. First expand, than edit, than save.";
@@ -91,9 +92,10 @@ trait Implementation
     /**
      * Delete the document
      * 
+     * @param array $opts
      * @return $this
      */
-    public function delete()
+    public function delete(array $opts = [])
     {
         static::getCollection()->remove([static::getIdProperty() => $this->getId()]);
         return $this;
