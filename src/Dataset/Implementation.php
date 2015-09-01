@@ -49,6 +49,8 @@ trait Implementation
             $plural = Inflector::pluralize($class);
             $name = Inflector::tableize($plural);
         }
+        
+        return $name;
     }
     
     /**

@@ -41,6 +41,8 @@ trait WithMeta
             $plural = Inflector::pluralize($class);
             $name = Inflector::tableize($plural);
         }
+        
+        return $name;
     }
     
     /**
@@ -68,7 +70,7 @@ trait WithMeta
      */
     public static function getIdProperty()
     {
-        foreach (static::meta()->forProperties() as $prop => $meta) {
+        foreach (static::meta()->ofProperties() as $prop => $meta) {
             if (isset($meta['id'])) return $prop;
         }
         
@@ -84,7 +86,7 @@ trait WithMeta
     {
         $fieldMap = ['_id' => static::getIdProperty()];
         
-        foreach (static::meta()->forProperties() as $prop => $meta) {
+        foreach (static::meta()->ofProperties() as $prop => $meta) {
             if (!isset($meta['dbFieldName']) || $meta['dbFieldName'] === $prop) continue;
             $fieldMap[$meta['dbFieldName']] = $prop;
         }

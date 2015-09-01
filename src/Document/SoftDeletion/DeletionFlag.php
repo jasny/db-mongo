@@ -2,6 +2,8 @@
 
 namespace Jasny\DB\Mongo\Document\SoftDeletion;
 
+use Jasny\DB\Mongo\DB;
+
 /**
  * Implementation of soft deletion using a flag (for documents).
  * 
@@ -50,9 +52,10 @@ trait DeletionFlag
     /**
      * Delete the document
      * 
+     * @param array $opts
      * @return $this
      */
-    public function delete()
+    public function delete(array $opts = [])
     {
         $filter = static::idToFilter($this);
         $query = static::filterToQuery($filter);
@@ -64,9 +67,10 @@ trait DeletionFlag
     /**
      * Undelete the document
      * 
+     * @param array $opts
      * @return $this
      */
-    public function undelete()
+    public function undelete(array $opts = [])
     {
         $filter = static::idToFilter($this);
         $query = static::filterToQuery($filter, ['from-trash']);
@@ -78,9 +82,10 @@ trait DeletionFlag
     /**
      * Purge a deleted document
      * 
+     * @param array $opts
      * @return $this
      */
-    public function purge()
+    public function purge(array $opts = [])
     {
         if (!$this->isDeleted()) throw new \Exception("Won't purge: " . get_called_class() . " isn't deleted");
 
@@ -93,8 +98,10 @@ trait DeletionFlag
     
     /**
      * Purge all deleted documents
+     * 
+     * @param array $opts
      */
-    public static function purgeAll()
+    public static function purgeAll(array $opts = [])
     {
         static::getCollection()->remove(['_deleted' => true]);
     }
