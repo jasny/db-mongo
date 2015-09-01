@@ -1,6 +1,6 @@
 <?php
 
-namespace Jasny\DB\Mongo;
+namespace Jasny\DB\Mongo\Dataset;
 
 /**
  * Always sort a resultset
@@ -14,7 +14,7 @@ interface Sorted
     /**
      * Get the field to sort on
      * 
-     * @return string
+     * @return string|array
      */
     public static function getDefaultSorting();
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Jasny\DB\Mongo;
+namespace Jasny\DB\Mongo\Dataset\Sorted;
 
 /**
  * Prepare the document to be sorted by casting it to a string
@@ -9,27 +9,27 @@ namespace Jasny\DB\Mongo;
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-trait AutoSorting
+trait Automatic
 {
-    public $_sort;
-    
     /**
      * Get the field to sort on
      * 
-     * @return string
+     * @return array
      */
-    public static function getDefaultSortField()
+    public static function getDefaultSorting()
     {
-        return '_sort';
+        return ['_sort'];
     }
     
     /**
      * Prepare sorting field
      * 
-     * @param Jasny\DB\Entity $entity
+     * @param Entity $entity
+     * @return array
      */
-    protected static function prepareSort($entity)
+    protected static function prepareDataForSort($entity)
     {
-        $entity->_sort = strtolower(iconv("UTF-8", "ASCII//TRANSLIT", (string)$entity));
+        $sort = strtolower(iconv("UTF-8", "ASCII//TRANSLIT", (string)$entity));
+        return ['_sort' => $sort];
     }
 }

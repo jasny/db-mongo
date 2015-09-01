@@ -2,7 +2,8 @@
 
 namespace Jasny\DB\Mongo\Document;
 
-use \Jasny\DB\Entity, \Jasny\DB\Recordset;
+use Jasny\DB\Entity,
+    Jasny\DB\Dataset;
 
 /**
  * Interface for document that supports soft deletion.
@@ -11,5 +12,5 @@ use \Jasny\DB\Entity, \Jasny\DB\Recordset;
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.com/db-mongo
  */
-interface SoftDeletion extends Entity\SoftDeletion, Recordset\WithTrash
+interface SoftDeletion extends Entity\SoftDeletion, Dataset\WithTrash
 {}

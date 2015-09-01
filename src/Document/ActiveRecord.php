@@ -3,16 +3,15 @@
 namespace Jasny\DB\Mongo\Document;
 
 use Jasny\DB\Entity,
-    Jasny\DB\Recordset;
+    Jasny\DB\Dataset;
 
 /**
  * Mongo document as Active Record
  */
 interface ActiveRecord extends
     Entity,
-    Entity\Identifiable,
     Entity\ActiveRecord,
+    Entity\Identifiable,
     Entity\UniqueProperties,
-    Recordset
+    Dataset
 { }
-

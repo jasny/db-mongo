@@ -13,7 +13,7 @@ use Jasny\DB\Connection, Jasny\DB\Entity, Jasny\DB\Blob;
  */
 class DB extends \MongoDB implements Connection, Connection\Namable
 {
-    use Connection\Named;
+    use Connection\Namable\Implemention;
     
     const ASCENDING = 1;
     const DESCENDING = -1;
@@ -21,7 +21,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
     /**
      * @var MongoClient
      */
-    protected $_mongoClient;
+    protected $mongoClient;
     
     /**
      * @param \MongoClient|string|array $client  Client or settings
@@ -44,7 +44,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         if (is_string($client)) $client = new \MongoClient($client);
         
         parent::__construct($client, $name);
-        $this->_mongoClient = $client;
+        $this->mongoClient = $client;
     }
     
     /**
@@ -54,7 +54,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
      */
     public function getClient()
     {
-        return $this->_mongoClient;
+        return $this->mongoClient;
     }
     
     /**
@@ -69,38 +69,27 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         return new Collection($this, $name, $recordClass);
     }
 
-    
     /**
-     * Convert value to mongo type
+     * Get's a collection
      * 
-     * @param mixed $value
-     * @return mixed
+     * @param string $name
+     * @return Collection
      */
-    public static function toMongoType($value)
+    public function __get($name)
     {
-        if ($value instanceof Entity) {
-            $value = $value->getValues();
-        }
-        
-        return static::propertyToMongoType($value);
+        return $this->selectCollection($name);
     }
     
+    
     /**
-     * Convert property to mongo type
+     * Convert property to mongo type.
+     * Works recursively for objects and arrays.
      * 
      * @param mixed $value
      * @return mixed
      */
-    protected static function propertyToMongoType($value)
+    protected static function toMongoType($value)
     {
-        if ($value instanceof Entity\Identifiable) {
-            if (isset($value->_id) && $value->_id instanceof \MongoId) {
-                return $value->_id;
-            }
-            
-            return $value->getId();
-        }
-        
         if ($value instanceof \DateTime) {
             return new \MongoDate($value->getTimestamp());
         }
@@ -108,10 +97,12 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         if ($value instanceof Blob) {
             return \MongoBinData($value, \MongoBinData::GENERIC);
         }
+
+        if ($value instanceof Entity) $value = $value->toData();
         
         if (is_array($value) || is_object($value)) {
             foreach ($value as &$v) {
-                $v = static::propertyToMongoType($v);
+                $v = static::toMongoType($v);
             }
             return $value;
         }
@@ -151,6 +142,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         return $value;
     }
     
+    
     /**
      * Convert a Jasny DB styled filter to a MongoDB query.
      * 
@@ -165,7 +157,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
             if ($key[0] === '$') throw new \Exception("Invalid filter key '$key'. Starting with '$' isn't allowed.");
             
             list($field, $operator) = array_map('trim', explode('(', str_replace(')', '', $key))) + [1 => null];
-            $value = static::propertyToMongoType($filterVal);
+            $value = static::toMongoType($filterVal);
             
             switch ($operator) {
                 case '':     $query[$field] = $value; break;
@@ -184,13 +176,29 @@ class DB extends \MongoDB implements Connection, Connection\Namable
     }
     
     /**
-     * Get's a collection
+     * Convert a Jasny DB styled sort array to a MongoDB sort.
      * 
-     * @param string $name
-     * @return Collection
+     * @param array $sort
+     * @return array
      */
-    public function __get($name)
+    public static function sortToQuery($sort)
     {
-        return $this->selectCollection($name);
+        $query = [];
+        
+        foreach ($sort as $key => $sortVal) {
+            $order = self::ASCENDING;
+            
+            if ($key[0] === '^') {
+                $key = substr($key, 1);
+                $order = self::DESCENDING;
+            }
+            
+            if ($key[0] === '$') throw new \Exception("Invalid sort key '$key'. Starting with '$' isn't allowed.");
+
+            $value = static::toMongoType($sortVal);
+            $query[$key] = $value;
+        }
+        
+        return $query;
     }
 }

@@ -1,8 +1,9 @@
 <?php
 
-namespace Jasny\DB\Mongo\Document;
+namespace Jasny\DB\Mongo\DataMapper;
 
-use Jasny\DB\DataMapper, \Jasny\DB\Recordset;
+use Jasny\DB\DataMapper,
+    Jasny\DB\Dataset;
 
 /**
  * Interface for document that supports soft deletion.
@@ -11,5 +12,5 @@ use Jasny\DB\DataMapper, \Jasny\DB\Recordset;
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.com/db-mongo
  */
-interface SoftDeletion extends DataMapper\SoftDeletion, Recordset\WithTrash
+interface SoftDeletion extends DataMapper\SoftDeletion, Dataset\WithTrash
 {}

@@ -17,6 +17,7 @@ class Collection extends \MongoCollection
      */
     protected static $indexed = [];
     
+    
     /**
      * Record class
      * @var string
@@ -45,6 +46,7 @@ class Collection extends \MongoCollection
      */
     public function createIndexes(array $indexes)
     {
+        // Prevent re-applying the same indexes this request
         if (static::$indexed[$this->getName()] === $indexes) return;
         
         foreach ($indexes as $index) {
@@ -171,20 +173,11 @@ class Collection extends \MongoCollection
      * 
      * @param array $query   Search query
      * @param array $fields  Fields to return
-     * @param array $sort    Fields to sort on
-     * @param int   $limit   Specifies an upper limit to the number returned
-     * @param int   $skip    Specifies a number of results to skip before starting the count
      * @return Cursor
      */
-    public function find(array $query = [], array $fields = [], $sort = null, $limit = null, $skip = null)
+    public function find(array $query = [], array $fields = [])
     {
-        $cursor = new Cursor($this->db->getClient(), $this, $query, $fields);
-        
-        if (isset($sort)) $cursor->sort($sort);
-        if (isset($limit)) $cursor->limit($limit);
-        if (isset($skip)) $cursor->skip($skip);
-        
-        return $cursor;
+        return new Cursor($this->db->getClient(), $this, $query, $fields);
     }
     
     /**

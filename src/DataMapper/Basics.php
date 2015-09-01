@@ -3,6 +3,7 @@
 namespace Jasny\DB\Mongo\DataMapper;
 
 use Jasny\DB\Entity,
+    Jasny\DB\FieldMap,
     Jasny\DB\Mongo\Common;
 
 /**
@@ -14,19 +15,34 @@ use Jasny\DB\Entity,
  */
 trait Basics
 {
-    use Common\CollectionGateway;
+    use Common\CollectionGateway,
+        FieldMap;
+    
+    /**
+     * Get the field map.
+     * 
+     * @return array
+     */
+    protected static function getFieldMap()
+    {
+        return ['_id' => 'id'];
+    }   
     
     /**
      * Get class name for the documents this mapper maps to.
      * 
      * @return string
      */
-    protected static function getDocumentClass()
+    protected static function getEntityClass()
     {
-        if (isset(static::$documentClass)) return static::$documentClass;
+        if (isset(static::$entityClass)) return static::$entityClass;
         
-        if (substr(get_called_class(), -6) !== 'Mapper') throw new Exception("Unable to determine document class");
-        return substr(get_called_class(), 0, -6);
+        if (substr(get_called_class(), -6) === 'Mapper') {
+            $class = substr(get_called_class(), 0, -6);
+            if (is_a($class, 'Jasny\DB\Entity')) return $class;
+        }
+        
+        throw new Exception("Unable to determine entity class");
     }
     
     
@@ -36,7 +52,7 @@ trait Basics
      * @param Entity $document
      * @return array
      */
-    protected function toData(Entity $document)
+    protected static function toData(Entity $document)
     {
         $values = $document->getValues();
         if ($this instanceof \Jasny\DB\FieldMapping) $values = static::mapToFields($values);
@@ -49,14 +65,13 @@ trait Basics
      * 
      * @param Entity $document
      */
-    public function save(Entity $document)
+    public static function save(Entity $document)
     {
-        if ($document instanceof LazyLoading && $document->isGhost()) throw new \Exception("Unable to save: This " .
-            get_class($document) . " entity isn't fully loaded. First expand, than edit, than save.");
-        
-        if (!$document->_id instanceof \MongoId) $document->_id = new \MongoId($this->_id);
-        if ($this instanceof Sorted && method_exists($this, 'prepareSort')) $this->prepareSort();
-        
+        if ($document instanceof LazyLoading && $document->isGhost()) {
+            throw new \Exception("Unable to save: This " . get_class($document) . " entity isn't fully loaded. "
+                . "First expand, than edit, than save.");
+        }
+                
         static::getCollection()->save($document);
     }
     
@@ -65,8 +80,15 @@ trait Basics
      * 
      * @param Entity $document
      */
-    public function delete($document)
+    public static function delete($document)
     {
-        static::getCollection()->remove(['_id' => $document->_id]);
+        if (!$document instanceof Entity\Identifiable) {
+            throw new Exception("A " . get_class($document) . " isn't identifiable");
+        }
+        
+        $filter = [$document->getIdProperty() => $document->getId()];
+        
+        
+        static::getCollection()->remove();
     }
 }

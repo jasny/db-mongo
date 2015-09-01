@@ -18,6 +18,8 @@ class Cursor extends \MongoCursor
     protected $collection;
 
     /**
+     * Class constructor
+     * 
      * @param \MongoClient      $connection
      * @param Collection|string $ns
      * @param array             $query
@@ -49,9 +51,9 @@ class Cursor extends \MongoCursor
         $values = parent::current();
         if (!isset($values)) return;
         
-        return isset($this->collection) && isset($values['_id']) ?
-            $this->collection->asDocument($values) :
-            DB::fromMongoType($values);
+        return isset($this->collection) && isset($values['_id'])
+            ? $this->collection->asDocument($values)
+            : DB::fromMongoType($values);
     }
     
     /**

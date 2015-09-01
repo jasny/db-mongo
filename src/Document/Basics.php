@@ -2,10 +2,9 @@
 
 namespace Jasny\DB\Mongo\Document;
 
-use Jasny\DB\FieldMapping,
-    Jasny\DB\Mongo\Common,
-    Jasny\DB\Entity,
-    Jasny\DB\Mongo\Sorted;
+use Jasny\DB\Entity,
+    Jasny\DB\FieldMapping,
+    Jasny\DB\Mongo\Dataset;
 
 /**
  * Static methods to interact with a collection (as document)
@@ -14,32 +13,46 @@ use Jasny\DB\FieldMapping,
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-trait Basics
+trait Implementation
 {
-    use Entity\Basics,
-        Common\CollectionGateway
+    use Entity\Implementation,
+        FieldMapping\Implementation,
+        Dataset\Implementation
     {
-        Entity\Basics::fromData as protected entityFromData;
+        Entity\Implementation::fromData as private _entity_fromData;
+    }
+    
+    
+    /**
+     * Get the field map.
+     * 
+     * @return array
+     */
+    protected static function getFieldMap()
+    {
+        return ['_id' => static::getIdProperty()];
     }
     
     /**
-     * Unique ObjectId
-     * @var \MongoId
+     * Get the property used to identify the document
+     * 
+     * @return string
      */
-    public $_id;
-    
-    
+    public static function getIdProperty()
+    {
+        return 'id';
+    }
+
     /**
      * Get document id.
-     * For linking documents within Mongo, use the `_id` property directly.
      * 
      * @return string
      */
     public function getId()
     {
-        return (string)$this->_id;
+        $prop = static::getIdProperty();
+        return $this->$prop;
     }
-    
     
     /**
      * Get the data that needs to be saved in the DB
@@ -48,11 +61,16 @@ trait Basics
      */
     protected function toData()
     {
-        $values = $this->getValues();
-        if ($this instanceof FieldMapping) $values = static::mapToFields($values);
+        $values = static::castForDB($this->getValues());
+        $data = static::mapToFields($values);
         
-        return $values;
+        if ($this instanceof Dataset\Sorted && method_exists(get_class($this), 'prepareDataForSort')) {
+            $data += static::prepareDataForSort();
+        }
+        
+        return $data;
     }
+
     
     /**
      * Save the document
@@ -61,11 +79,10 @@ trait Basics
      */
     public function save()
     {
-        if ($this instanceof Entity\LazyLoading && $this->isGhost()) throw new \Exception("Unable to save: This " .
-            get_called_class() . " entity isn't fully loaded. First expand, than edit, than save.");
-        
-        if (!$this->_id instanceof \MongoId) $this->_id = new \MongoId($this->_id);
-        if ($this instanceof Sorted && method_exists($this, 'prepareSort')) $this->prepareSort();
+        if ($this instanceof Entity\LazyLoading && $this->isGhost()) {
+            $msg = "This " . get_called_class() . " entity isn't fully loaded. First expand, than edit, than save.";
+            throw new \Exception("Unable to save: $msg");
+        }
         
         static::getCollection()->save($this->toData());
         return $this;
@@ -78,7 +95,7 @@ trait Basics
      */
     public function delete()
     {
-        static::getCollection()->remove(['_id' => $this->_id]);
+        static::getCollection()->remove([static::getIdProperty() => $this->getId()]);
         return $this;
     }
 
@@ -91,7 +108,11 @@ trait Basics
     public function hasUnique($property)
     {
         if (!isset($this->$property)) return true;
-        return !static::exists(['_id(not)' => $this->_id, $property => $this->$property]);
+        
+        return !static::exists([
+            static::getIdProperty() . '(not)' => $this->getId(),
+            $property => $this->$property
+        ]);
     }
     
     
@@ -111,7 +132,7 @@ trait Basics
             if ($value instanceof \MongoId) $value = (string)$value;
         }
         
-        return (object)$values;
+        return $this->jsonSerializeFilter((object)$values);
     }
     
     /**
@@ -122,7 +143,7 @@ trait Basics
      */
     public static function fromData($values)
     {
-        if (is_a(get_called_class(), 'Jasny\DB\FieldMapping', true)) $values = static::mapFromFields($values);
-        return static::entityFromData($values);
+        $mapped = static::mapFromFields($values);
+        return static::_entity_fromData($mapped);
     }
 }
