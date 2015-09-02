@@ -39,7 +39,7 @@ trait Basics
         
         if (substr(get_called_class(), -6) === 'Mapper') {
             $class = substr(get_called_class(), 0, -6);
-            if (is_a($class, 'Jasny\DB\Entity')) return $class;
+            if (is_a($class, Entity::class)) return $class;
         }
         
         throw new Exception("Unable to determine entity class");

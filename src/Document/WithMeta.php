@@ -53,11 +53,15 @@ trait WithMeta
      */
     protected static function castForDB($data)
     {
-        foreach ($data as $prop => &$value) {
-            $prop = trim(strstr($prop, '(', true)) ?: $prop; // Remove filter directives
+        foreach ($data as $key => &$value) {
+            $prop = trim(strstr($key, '(', true)) ?: $key; // Remove filter directives
+            $meta = static::meta()->{$prop};
             
-            if (!isset(static::meta()->$prop['dbFieldType'])) continue;
-            $value = TypeCast::cast($value, static::meta()->$prop['dbFieldType']);
+            if (!isset($meta['dbSkip'])) {
+                unset($data[$key]);
+            } elseif (isset($meta['dbFieldType'])) {
+                $value = TypeCast::cast($value, $meta['dbFieldType']);
+            }
         }
         
         return $data;
@@ -102,8 +106,8 @@ trait WithMeta
      */
     protected function jsonSerializeFilter($object)
     {
-        foreach (get_object_vars($object) as $prop) {
-            if (isset(static::meta()->$prop['ignore'])) {
+        foreach ($object as $prop => $value) {
+            if (isset(static::meta()->{$prop}['ignore'])) {
                 unset($object->$prop);
             }
         }

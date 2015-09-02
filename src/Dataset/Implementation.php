@@ -93,7 +93,7 @@ trait Implementation
         if ($id instanceof \MongoId || is_scalar($id)) {
             $class = static::getDocumentClass();
             
-            if (!is_a($class, 'Jasny\DB\Entity\Identifiable')) {
+            if (!is_a($class, Identifiable::class, true)) {
                 throw new \Exception("Unable to query using a " . gettype($id) . ": $class isn't identifiable");
             }
             

@@ -17,4 +17,12 @@ abstract class Document implements
 {
     use Document\WithMeta,
         LazyLoading\Implementation;
+    
+    /**
+     * Class constructor
+     */
+    public function __construct()
+    {
+        $this->cast();
+    }
 }
