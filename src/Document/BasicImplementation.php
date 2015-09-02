@@ -104,17 +104,20 @@ trait BasicImplementation
     /**
      * Check no other document with the same value of the property exists
      * 
-     * @param string $property
+     * @param string        $property
+     * @param array|string  $group     List of properties that should match
      * @return boolean
      */
-    public function hasUnique($property)
+    public function hasUnique($property, $group = null)
     {
         if (!isset($this->$property)) return true;
         
-        return !static::exists([
-            static::getIdProperty() . '(not)' => $this->getId(),
-            $property => $this->$property
-        ]);
+        $filter = [static::getIdProperty() . '(not)' => $this->_id, $property => $this->$property];
+        foreach ((array)$group as $prop) {
+            if (isset($this->$prop)) $filter[$prop] = $this->$prop;
+        }
+        
+        return !static::exists($filter);
     }
     
     
