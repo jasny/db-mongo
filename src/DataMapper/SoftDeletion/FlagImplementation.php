@@ -11,7 +11,7 @@ use Jasny\DB\Entity;
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-trait DeletionFlag
+trait FlagImplementation
 {
     /**
      * Convert a Jasny DB styled filter to a MongoDB query.

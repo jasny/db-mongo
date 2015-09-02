@@ -9,9 +9,9 @@ use Jasny\DB\Entity,
 /**
  * Document implementation with Introspection and TypedObject implementation
  */
-trait WithMeta
+trait MetaImplementation
 {
-    use Basics,
+    use BasicImplementation,
         Entity\Meta\Implementation;
     
     /**

@@ -3,8 +3,8 @@
 namespace Jasny\DB\Mongo\DataMapper;
 
 use Jasny\DB\Entity,
-    Jasny\DB\FieldMap,
-    Jasny\DB\Mongo\Common;
+    Jasny\DB\FieldMapping,
+    Jasny\DB\Mongo\Dataset;
 
 /**
  * Basics for a Mongo DataMapper
@@ -13,10 +13,10 @@ use Jasny\DB\Entity,
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-trait Basics
+trait BasicImplementation
 {
-    use Common\CollectionGateway,
-        FieldMap;
+    use Dataset\Implementation,
+        FieldMapping\Implementation;
     
     /**
      * Get the field map.

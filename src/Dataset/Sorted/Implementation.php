@@ -9,7 +9,7 @@ namespace Jasny\DB\Mongo\Dataset\Sorted;
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-trait Automatic
+trait Implementation
 {
     /**
      * Get the field to sort on

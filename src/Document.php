@@ -15,7 +15,7 @@ abstract class Document implements
     FieldMapping,
     LazyLoading
 {
-    use Document\WithMeta,
+    use Document\MetaImplementation,
         LazyLoading\Implementation;
     
     /**

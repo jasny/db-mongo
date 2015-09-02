@@ -13,7 +13,7 @@ use Jasny\DB\Entity,
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-trait Basics
+trait BasicImplementation
 {
     use Entity\Implementation,
         FieldMapping\Implementation,
