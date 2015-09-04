@@ -59,10 +59,11 @@ trait BasicImplementation
      * 
      * @return array
      */
-    protected function toData()
+    public function toData()
     {
-        $values = static::castForDB($this->getValues());
-        $data = static::mapToFields($values);
+        $values = $this->getValues();
+        $casted = static::castForDB($values);
+        $data = static::mapToFields($casted);
         
         if ($this instanceof Dataset\Sorted && method_exists(get_class($this), 'prepareDataForSort')) {
             $data += static::prepareDataForSort();
@@ -102,22 +103,41 @@ trait BasicImplementation
     }
 
     /**
+     * Reload the entity from the DB
+     * 
+     * @param array $opts
+     * @return $this
+     */
+    public function reload(array $opts = [])
+    {
+        $entity = static::fetch($this, $opts);
+
+        foreach ((array)$entity as $prop => $value) {
+            if ($prop[0] === "\0") continue; // Ignore private and protected properties
+            $this->$prop = $value;
+        }
+        
+        return $this;
+    }
+    
+    /**
      * Check no other document with the same value of the property exists
      * 
      * @param string        $property
      * @param array|string  $group     List of properties that should match
+     * @param array         $opts
      * @return boolean
      */
-    public function hasUnique($property, $group = null)
+    public function hasUnique($property, $group = null, array $opts = [])
     {
         if (!isset($this->$property)) return true;
         
-        $filter = [static::getIdProperty() . '(not)' => $this->_id, $property => $this->$property];
+        $filter = [static::getIdProperty() . '(not)' => $this->getId(), $property => $this->$property];
         foreach ((array)$group as $prop) {
             if (isset($this->$prop)) $filter[$prop] = $this->$prop;
         }
         
-        return !static::exists($filter);
+        return !static::exists($filter, $opts);
     }
     
     

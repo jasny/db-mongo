@@ -97,7 +97,12 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         if ($value instanceof Blob) {
             return \MongoBinData($value, \MongoBinData::GENERIC);
         }
-
+        
+        if ($value instanceof Entity\Identifiable) {
+            $data = $value->toData();
+            return isset($data['_id']) ? $data['_id'] : $value->getId();
+        }
+        
         if ($value instanceof Entity) $value = $value->toData();
         
         if (is_array($value) || is_object($value)) {

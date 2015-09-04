@@ -12,6 +12,6 @@ interface ActiveRecord extends
     Entity,
     Entity\ActiveRecord,
     Entity\Identifiable,
-    Entity\UniqueProperties,
+    Entity\SelfAware,
     Dataset
 { }

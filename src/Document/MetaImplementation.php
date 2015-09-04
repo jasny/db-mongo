@@ -12,7 +12,8 @@ use Jasny\DB\Entity,
 trait MetaImplementation
 {
     use BasicImplementation,
-        Entity\Meta\Implementation;
+        Entity\Meta\Implementation,
+        Entity\Validation\MetaImplementation;
     
     /**
      * Get the database connection
@@ -57,7 +58,7 @@ trait MetaImplementation
             $prop = trim(strstr($key, '(', true)) ?: $key; // Remove filter directives
             $meta = static::meta()->{$prop};
             
-            if (!isset($meta['dbSkip'])) {
+            if (isset($meta['dbSkip'])) {
                 unset($data[$key]);
             } elseif (isset($meta['dbFieldType'])) {
                 $value = TypeCast::cast($value, $meta['dbFieldType']);

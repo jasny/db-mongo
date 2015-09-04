@@ -2,21 +2,21 @@
 
 namespace Jasny\DB\Mongo;
 
-use Jasny\DB\Entity\Meta,
-    Jasny\DB\FieldMapping,
-    Jasny\DB\Entity\LazyLoading;
+use Jasny\DB\Entity,
+    Jasny\DB\FieldMapping;
 
 /**
  * Base class for Mongo Documents
  */
 abstract class Document implements
     Document\ActiveRecord,
-    Meta,
+    Entity\Meta,
     FieldMapping,
-    LazyLoading
+    Entity\LazyLoading,
+    Entity\Validation
 {
     use Document\MetaImplementation,
-        LazyLoading\Implementation;
+        Entity\LazyLoading\Implementation;
     
     /**
      * Class constructor
