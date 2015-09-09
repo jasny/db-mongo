@@ -88,7 +88,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
      * @param mixed $value
      * @return mixed
      */
-    protected static function toMongoType($value)
+    public static function toMongoType($value)
     {
         if ($value instanceof \DateTime) {
             return new \MongoDate($value->getTimestamp());

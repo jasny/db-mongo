@@ -16,7 +16,7 @@ abstract class Document implements
     Entity\Validation
 {
     use Document\MetaImplementation,
-        Entity\LazyLoading\Implementation;
+        Document\LazyLoading\Implementation;
     
     /**
      * Class constructor

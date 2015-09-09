@@ -69,6 +69,7 @@ trait BasicImplementation
             $data += static::prepareDataForSort();
         }
         
+        if (array_key_exists('_id', $data) && is_null($data['_id'])) unset($data['_id']);
         return $data;
     }
 
