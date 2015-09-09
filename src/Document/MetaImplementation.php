@@ -16,6 +16,7 @@ trait MetaImplementation
         Entity\Validation\MetaImplementation
     {
         BasicImplementation::setValues as private _basic_setValues;
+        Entity\Meta\Implementation::castValueToClass as private _entityMeta_castValueToClass;
     }
     
     /**
@@ -64,7 +65,7 @@ trait MetaImplementation
             if (isset($meta['dbSkip'])) {
                 unset($data[$key]);
             } elseif (isset($meta['dbFieldType'])) {
-                $value = TypeCast::cast($value, $meta['dbFieldType']);
+                $value = static::castValue($value, $meta['dbFieldType']);
             }
         }
         
@@ -130,4 +131,28 @@ trait MetaImplementation
         
         return $object;
     }
+    
+    /**
+     * Cast value to a non-internal type
+     * 
+     * @param mixed  $value
+     * @param string $type
+     * @return Entity|object
+     */
+    protected static function castValueToClass($value, $type)
+    {
+        if (strtolower(ltrim($type, '\\')) === 'mongoid' && !$value instanceof \MongoId) {
+            if (!is_string($value)) {
+                trigger_error("Unable to cast ". gettype($value) . " to a MongoId.", E_USER_WARNING);
+                return $value;
+            }
+            
+            if (!ctype_xdigit($value) || strlen($value) != 24) {
+                trigger_error("Unable to cast string '$value' to a MongoId.", E_USER_WARNING);
+                return $value;
+            }
+        }
+        
+        return static::_entityMeta_castValueToClass($value, $type);
+    }    
 }

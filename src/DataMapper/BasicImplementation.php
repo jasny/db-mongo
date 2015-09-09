@@ -88,7 +88,6 @@ trait BasicImplementation
         
         $filter = [$document->getIdProperty() => $document->getId()];
         
-        
-        static::getCollection()->remove();
+        static::getCollection()->remove($filter);
     }
 }
