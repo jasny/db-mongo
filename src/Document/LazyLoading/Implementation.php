@@ -30,12 +30,12 @@ trait Implementation
         
         if ($values instanceof \MongoId) {
             if (!is_a($class, Identifiable::class, true)) {
-                throw new Exception("Unable to lazy load a MongoId for $class: Identity property not defined");
+                throw new \Exception("Unable to lazy load a MongoId for $class: Identity property not defined");
             }
             
             $prop = static::getIdProperty();
             if (is_array($prop)) {
-                throw new Exception("Unable to lazy load a MongoId for $class: Class has a complex identity");
+                throw new \Exception("Unable to lazy load a MongoId for $class: Class has a complex identity");
             }
             
             $values = [$prop => $values];

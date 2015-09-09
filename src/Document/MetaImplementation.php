@@ -13,7 +13,10 @@ trait MetaImplementation
 {
     use BasicImplementation,
         Entity\Meta\Implementation,
-        Entity\Validation\MetaImplementation;
+        Entity\Validation\MetaImplementation
+    {
+        BasicImplementation::setValues as private _basic_setValues;
+    }
     
     /**
      * Get the database connection
@@ -97,6 +100,18 @@ trait MetaImplementation
         }
         
         return $fieldMap;
+    }
+    
+    /**
+     * Set the values.
+     * 
+     * @param array|object $values
+     * @return $this
+     */
+    public function setValues($values)
+    {
+        $this->_basic_setValues($values);
+        $this->cast();
     }
     
     /**
