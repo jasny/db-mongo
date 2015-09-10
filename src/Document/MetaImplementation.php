@@ -154,5 +154,5 @@ trait MetaImplementation
         }
         
         return static::_entityMeta_castValueToClass($value, $type);
-    }    
+    }
 }

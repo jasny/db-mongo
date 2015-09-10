@@ -2,8 +2,7 @@
 
 namespace Jasny\DB\Mongo\Document\LazyLoading;
 
-use Jasny\DB\Entity\LazyLoading\Implementation as Base,
-    Jasny\DB\Entity\Identifiable;
+use Jasny\DB\Entity\Identifiable;
 
 /**
  * Implementation for LazyLoading interface for MongoDB documents / entities
@@ -14,7 +13,7 @@ use Jasny\DB\Entity\LazyLoading\Implementation as Base,
  */
 trait Implementation
 {
-    use Base {
+    use \Jasny\DB\Entity\LazyLoading\Implementation {
         lazyload as _entity_lazyload;
     }
     
