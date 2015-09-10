@@ -143,7 +143,7 @@ trait MetaImplementation
     {
         if (strtolower(ltrim($type, '\\')) === 'mongoid' && !$value instanceof \MongoId) {
             if (!is_string($value)) {
-                trigger_error("Unable to cast ". gettype($value) . " to a MongoId.", E_USER_WARNING);
+                trigger_error("Unable to cast " . gettype($value) . " to a MongoId.", E_USER_WARNING);
                 return $value;
             }
             

@@ -129,10 +129,10 @@ trait Implementation
      */
     public static function fetch($id, array $opts = [])
     {
-        $filter = static::idToFilter($id, $opts);
+        $filter = static::idToFilter($id);
         if (!isset($filter)) return null;
 
-        $query = static::filterToQuery($filter);
+        $query = static::filterToQuery($filter, $opts);
         return static::getCollection()->findOne($query);
     }
     
@@ -145,10 +145,10 @@ trait Implementation
      */
     public static function exists($id, array $opts = [])
     {
-        $filter = static::idToFilter($id, $opts);
+        $filter = static::idToFilter($id);
         if (!isset($filter)) return null;
         
-        $query = static::filterToQuery($filter);
+        $query = static::filterToQuery($filter, $opts);
         return (boolean)static::getCollection()->count($query, 1);
     }
     
