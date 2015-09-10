@@ -87,7 +87,13 @@ trait BasicImplementation
             throw new \Exception("Unable to save: $msg");
         }
         
-        static::getCollection()->save($this->toData());
+        $data = $this->toData();
+        static::getCollection()->save($data);
+        
+        $idProp = static::getIdProperty();
+        $this->$idProp = $data['_id'];
+        $this->cast();
+        
         return $this;
     }
     
