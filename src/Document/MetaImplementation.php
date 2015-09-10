@@ -3,7 +3,6 @@
 namespace Jasny\DB\Mongo\Document;
 
 use Jasny\DB\Entity,
-    Jasny\TypeCast,
     Doctrine\Common\Inflector\Inflector;
 
 /**
