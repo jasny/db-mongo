@@ -4,7 +4,8 @@ namespace Jasny\DB\Mongo\Document;
 
 use Jasny\DB\Entity,
     Jasny\DB\FieldMapping,
-    Jasny\DB\Mongo\Dataset;
+    Jasny\DB\Mongo\Dataset,
+    Jasny\DB\Dataset\Sorted;
 
 /**
  * Static methods to interact with a collection (as document)
@@ -65,8 +66,8 @@ trait BasicImplementation
         $casted = static::castForDB($values);
         $data = static::mapToFields($casted);
         
-        if ($this instanceof Dataset\Sorted && method_exists(get_class($this), 'prepareDataForSort')) {
-            $data += static::prepareDataForSort();
+        if ($this instanceof Sorted && method_exists($this, 'prepareDataForSort')) {
+            $data += static::prepareDataForSort($this);
         }
         
         if (array_key_exists('_id', $data) && is_null($data['_id'])) unset($data['_id']);

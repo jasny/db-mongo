@@ -3,7 +3,8 @@
 namespace Jasny\DB\Mongo\Dataset;
 
 use Jasny\DB\Mongo\DB,
-    Jasny\DB\Entity\Identifiable;
+    Jasny\DB\Entity\Identifiable,
+    Jasny\DB\Dataset\Sorted;
 
 /**
  * Static methods to interact with a collection (as both document and data mapper)
@@ -168,7 +169,7 @@ trait Implementation
         $cursor = static::getCollection()->find($query);
         
         // Sort
-        if (is_a(get_called_class(), 'Jasny\DB\Mongo\Sorted', true)) {
+        if (is_a(get_called_class(), Sorted::class, true)) {
             $sort = (array)$sort + static::getDefaultSorting();
         }
         $querySort = DB::sortToQuery($sort);

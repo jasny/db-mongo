@@ -112,6 +112,8 @@ trait MetaImplementation
     {
         $this->_basic_setValues($values);
         $this->cast();
+        
+        return $this;
     }
     
     /**

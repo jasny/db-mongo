@@ -20,7 +20,7 @@ trait Implementation
     /**
      * Create a ghost object.
      * 
-     * @param array|MongoId|mixed $values  Values or ID
+     * @param array|\MongoId|mixed $values  Values or ID
      * @return static
      */
     public static function lazyload($values)

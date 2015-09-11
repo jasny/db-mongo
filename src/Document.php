@@ -86,8 +86,11 @@ abstract class Document implements
      */
     public static function lazyload($values)
     {
+        if ($values instanceof \stdClass) $values = (array)$values;
+        if (is_array($values)) $values = static::mapFromFields($values);
+        
         $entity = static::_lazyload($values);
-        $entity->markAsPersisted();
+        $entity->cast();
         
         return $entity;
     }
