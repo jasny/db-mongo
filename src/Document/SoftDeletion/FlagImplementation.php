@@ -73,7 +73,7 @@ trait FlagImplementation
     public function undelete(array $opts = [])
     {
         $filter = static::idToFilter($this);
-        $query = static::filterToQuery($filter, ['from-trash']);
+        $query = static::filterToQuery($filter, array_merge($opts, ['from-trash']));
         
         static::getCollection()->update($query, ['$unset' => ['_deleted' => 1]]);
         return $this;
@@ -90,7 +90,7 @@ trait FlagImplementation
         if (!$this->isDeleted()) throw new \Exception("Won't purge: " . get_called_class() . " isn't deleted");
 
         $filter = static::idToFilter($this);
-        $query = static::filterToQuery($filter, ['from-trash']);
+        $query = static::filterToQuery($filter, array_merge($opts, ['from-trash']));
         
         static::getCollection()->remove($query);
         return $this;

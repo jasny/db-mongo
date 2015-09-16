@@ -42,9 +42,9 @@ abstract class Document implements
      */
     public function reload(array $opts = [])
     {
-        $this->_reload($opts);
-        $this->markAsPersisted();
+        if (!$this->_reload($opts)) return false;
         
+        $this->markAsPersisted();
         return $this;
     }
     

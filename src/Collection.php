@@ -2,6 +2,8 @@
 
 namespace Jasny\DB\Mongo;
 
+use Jasny\DB\Mongo\Cursor;
+
 /**
  * Mongo collection which produces Document objects
  * 
@@ -192,21 +194,5 @@ class Collection extends \MongoCollection
     {
         $values = parent::findOne($query, $fields);
         return isset($values) && empty($fields) ? $this->asDocument($values) : $values;
-    }
-    
-    /**
-     * Counts the number of documents in this collection.
-     * 
-     * @param array|\MongoId $query  The fields for which to search
-     * @param int            $limit  Specifies an upper limit to the number returned
-     * @param int            $skip   Specifies a number of results to skip before starting the count
-     * @return int
-     */
-    public function count(array $query = [], $limit = 0, $skip = 0)
-    {
-        if ($query instanceof \MongoId) $query = ['_id' => $query];
-        if (is_string($query)) $query = ['_id' => new \MongoId($query)];
-        
-        return parent::count($query, $limit, $skip);
     }
 }

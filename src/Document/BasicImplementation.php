@@ -3,6 +3,7 @@
 namespace Jasny\DB\Mongo\Document;
 
 use Jasny\DB\Entity,
+    Jasny\DB\EntitySet,
     Jasny\DB\FieldMapping,
     Jasny\DB\Mongo\Dataset,
     Jasny\DB\Dataset\Sorted;
@@ -114,11 +115,12 @@ trait BasicImplementation
      * Reload the entity from the DB
      * 
      * @param array $opts
-     * @return $this
+     * @return $this|false
      */
     public function reload(array $opts = [])
     {
         $entity = static::fetch($this, $opts);
+        if (!$entity) return false;
 
         foreach ((array)$entity as $prop => $value) {
             if ($prop[0] === "\0") continue; // Ignore private and protected properties
