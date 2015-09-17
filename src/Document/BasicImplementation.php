@@ -173,11 +173,13 @@ trait BasicImplementation
     /**
      * Convert loaded values to an entity
      * 
-     * @param array $values
+     * @param array|object $values
      * @return static
      */
     public static function fromData($values)
     {
+        if (is_object($values)) $values = (array)$values;
+        
         $mapped = static::mapFromFields($values);
         return static::_entity_fromData($mapped);
     }

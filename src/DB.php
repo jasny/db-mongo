@@ -2,7 +2,10 @@
 
 namespace Jasny\DB\Mongo;
 
-use Jasny\DB\Connection, Jasny\DB\Entity, Jasny\DB\Blob;
+use Jasny\DB\Connection,
+    Jasny\DB\Entity,
+    Jasny\DB\EntitySet,
+    Jasny\DB\Blob;
 
 /**
  * Instances of this class are used to interact with a Mongo database.
@@ -105,11 +108,14 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         
         if ($value instanceof Entity) $value = $value->toData();
         
+        if ($value instanceof \ArrayObject || $value instanceof EntitySet) {
+            $value = $value->getArrayCopy();
+        } 
+        
         if (is_array($value) || is_object($value)) {
             foreach ($value as &$v) {
                 $v = static::toMongoType($v);
             }
-            return $value;
         }
         
         return $value;
