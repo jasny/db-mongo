@@ -3,6 +3,7 @@
 namespace Jasny\DB\Mongo\Dataset;
 
 use Jasny\DB\Mongo\DB,
+    Jasny\DB\EntitySet,
     Jasny\DB\Entity\Identifiable,
     Jasny\DB\Dataset\Sorted;
 
@@ -160,7 +161,7 @@ trait Implementation
      * @param array     $sort
      * @param int|array $limit  Limit or [limit, offset]
      * @param array     $opts
-     * @return static[]|\Jasny\DB\Entity[]
+     * @return EntitySet|static[]|\Jasny\DB\Entity[]
      */
     public static function fetchAll(array $filter = [], $sort = [], $limit = null, array $opts = [])
     {
@@ -182,7 +183,7 @@ trait Implementation
         if (isset($skip)) $cursor->skip($skip);
 
         // Return
-        return array_values(iterator_to_array($cursor));
+        return new EntitySet($cursor);
     }
 
     /**
