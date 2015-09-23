@@ -186,7 +186,7 @@ trait Implementation
     }
 
     /**
-     * Fetch all descriptions.
+     * Fetch id/description pairs.
      * 
      * @param array     $filter
      * @param array     $sort
@@ -194,7 +194,7 @@ trait Implementation
      * @param array     $opts
      * @return array
      */
-    public static function fetchList(array $filter = [], $sort = [], $limit = null, array $opts = [])
+    public static function fetchPairs(array $filter = [], $sort = [], $limit = null, array $opts = [])
     {
         $list = [];
         foreach (static::fetchAll($filter, $sort, $limit, $opts) as $record) {
