@@ -3,7 +3,8 @@
 namespace Jasny\DB\Mongo\Dataset\Search;
 
 use Jasny\Meta\TypedObject,
-    Jasny\DB\Mongo\Dataset;
+    Jasny\DB\Mongo\Dataset,
+    Jasny\DB\EntitySet;
 
 /**
  * Poorman's search implementation
@@ -72,12 +73,12 @@ trait PoormansImplementation
      * @param array     $filter
      * @param array     $sort
      * @param int|array $limit
-     * @param int       $total   OUTPUT: total number of records
      * @param array     $opts
-     * @return User[]
+     * @return EntitySet|User[]
      */
-    public static function search($terms, $filter, $sort = null, $limit = null, &$total = null, array $opts = [])
+    public static function search($terms, $filter, $sort = null, $limit = null, array $opts = [])
     {
+        $collection = static::getCollection();
         $query = static::searchQuery($terms) + static::filterToQuery($filter, $opts);
         
         if (is_a(get_called_class(), Dataset\Sorted::class, true)) {
@@ -86,9 +87,12 @@ trait PoormansImplementation
         
         list($lmt, $offset) = (array)$limit + [null, null];
         
-        $cursor = static::getCollection()->find($query, [], $sort, $lmt, $offset);
-        if (func_num_args() >= 5) $total = static::getCollection()->count($query);
+        $cursor = $collection->find($query, [], $sort, $lmt, $offset);
         
-        return array_values(iterator_to_array($cursor));
+        $totalFn = function() use($collection, $query) {
+            return $collection->count($query);
+        };
+        
+        return new EntitySet(self::getDocumentClass(), $cursor, $totalFn);
     }
 }

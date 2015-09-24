@@ -165,9 +165,15 @@ trait Implementation
      */
     public static function fetchAll(array $filter = [], $sort = [], $limit = null, array $opts = [])
     {
+        $collection = static::getCollection();
+        
         // Query
         $query = static::filterToQuery($filter, $opts);
-        $cursor = static::getCollection()->find($query);
+        $cursor = $collection->find($query);
+
+        $totalFn = function() use($collection, $query) {
+            return $collection->count($query);
+        };
         
         // Sort
         if (is_a(get_called_class(), Sorted::class, true)) {
@@ -181,9 +187,9 @@ trait Implementation
         
         if (isset($limit)) $cursor->limit($limit);
         if (isset($skip)) $cursor->skip($skip);
-
+        
         // Return
-        return new EntitySet($cursor);
+        return new EntitySet(static::getDocumentClass(), $cursor, $totalFn);
     }
 
     /**
