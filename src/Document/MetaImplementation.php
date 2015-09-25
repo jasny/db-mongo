@@ -120,10 +120,10 @@ trait MetaImplementation
     /**
      * Filter object for json serialization
      * 
-     * @param stdClass $object
-     * @return stdClass
+     * @param \stdClass $object
+     * @return \stdClass
      */
-    protected function jsonSerializeFilter($object)
+    protected function jsonSerializeFilter(\stdClass $object)
     {
         foreach ($object as $prop => $value) {
             if (static::meta()->of($prop)['ignore']) {
