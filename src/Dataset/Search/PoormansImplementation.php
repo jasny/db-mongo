@@ -2,8 +2,8 @@
 
 namespace Jasny\DB\Mongo\Dataset\Search;
 
-use Jasny\Meta\TypedObject,
-    Jasny\DB\EntitySet;
+use Jasny\Meta\TypedObject;
+use Jasny\DB\Dataset;
 
 /**
  * Poorman's search implementation

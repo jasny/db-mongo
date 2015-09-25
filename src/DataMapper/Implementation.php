@@ -42,7 +42,7 @@ trait Implementation
             if (is_a($class, Entity::class)) return $class;
         }
         
-        throw new Exception("Unable to determine entity class");
+        throw new \Exception("Unable to determine entity class");
     }
     
     
