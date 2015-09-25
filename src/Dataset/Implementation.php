@@ -189,7 +189,8 @@ trait Implementation
         if (isset($skip)) $cursor->skip($skip);
         
         // Return
-        return new EntitySet(static::getDocumentClass(), $cursor, $totalFn);
+        $class = static::getDocumentClass();
+        return $class::entitySet($cursor, $totalFn);
     }
 
     /**

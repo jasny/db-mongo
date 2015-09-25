@@ -16,6 +16,7 @@ trait MetaImplementation
     {
         BasicImplementation::setValues as private _basic_setValues;
         Entity\Meta\Implementation::castValueToClass as private _entityMeta_castValueToClass;
+        Entity\Meta\Implementation::entitySet insteadof BasicImplementation;
     }
     
     /**
@@ -125,7 +126,7 @@ trait MetaImplementation
     protected function jsonSerializeFilter($object)
     {
         foreach ($object as $prop => $value) {
-            if (isset(static::meta()->{$prop}['ignore'])) {
+            if (static::meta()->of($prop)['ignore']) {
                 unset($object->$prop);
             }
         }

@@ -93,6 +93,7 @@ trait PoormansImplementation
             return $collection->count($query);
         };
         
-        return new EntitySet(self::getDocumentClass(), $cursor, $totalFn);
+        $class = self::getDocumentClass();
+        return $class::entitySet($cursor, $totalFn);
     }
 }
