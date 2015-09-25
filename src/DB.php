@@ -205,8 +205,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
             }
             
             if ($key[0] === '$') throw new \Exception("Invalid sort key '$key'. Starting with '$' isn't allowed.");
-
-            $value = static::toMongoType($key);
+            
             $query[$key] = $order;
         }
         
