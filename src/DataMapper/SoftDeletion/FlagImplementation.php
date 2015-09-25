@@ -3,6 +3,7 @@
 namespace Jasny\DB\Mongo\DataMapper\SoftDeletion;
 
 use Jasny\DB\Entity;
+use Jasny\DB\Mongo\DB;
 
 /**
  * Implementation of soft deletion using a flag (for documents).

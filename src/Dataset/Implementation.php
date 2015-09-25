@@ -2,9 +2,10 @@
 
 namespace Jasny\DB\Mongo\Dataset;
 
-use Jasny\DB\Mongo\DB,
-    Jasny\DB\Entity\Identifiable,
-    Jasny\DB\Dataset\Sorted;
+use Jasny\DB\Mongo\DB;
+use Jasny\DB\Entity\Identifiable;
+use Jasny\DB\Dataset\Sorted;
+use Doctrine\Common\Inflector\Inflector;
 
 /**
  * Static methods to interact with a collection (as both document and data mapper)

@@ -3,7 +3,8 @@
 namespace Jasny\DB\Mongo;
 
 use Jasny\DB\Dataset,
-    Jasny\DB\FieldMapping;
+    Jasny\DB\FieldMapping,
+    Jasny\DB\Mongo\DataMapper;
 
 /**
  * Data Mapper for fetching and storing entities using Mongo.
@@ -12,7 +13,7 @@ use Jasny\DB\Dataset,
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-class DataMapper implements Jasny\DB\DataMapper, Dataset, FieldMapping
+class DataMapper implements \Jasny\DB\DataMapper, Dataset, FieldMapping
 {
-    use DataMapper\Basics;    
+    use DataMapper\Implementation;    
 }

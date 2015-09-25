@@ -129,7 +129,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
      */
     public static function fromMongoType($value)
     {
-        if (is_array($value) || $value instanceof stdClass) {
+        if (is_array($value) || $value instanceof \stdClass) {
             $isNumeric = is_array($value) && (key($value) === 0 &&
                 array_keys($value) === array_keys(array_fill(0, count($value), null))) || !count($value);
             

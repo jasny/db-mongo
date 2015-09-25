@@ -13,7 +13,7 @@ use Jasny\DB\Entity,
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-trait BasicImplementation
+trait Implementation
 {
     use Dataset\Implementation,
         FieldMapping\Implementation;
@@ -55,7 +55,7 @@ trait BasicImplementation
     protected static function toData(Entity $document)
     {
         $values = $document->getValues();
-        if ($this instanceof \Jasny\DB\FieldMapping) $values = static::mapToFields($values);
+        if ($this instanceof FieldMapping) $values = static::mapToFields($values);
         
         return $values;
     }
@@ -67,7 +67,7 @@ trait BasicImplementation
      */
     public static function save(Entity $document)
     {
-        if ($document instanceof LazyLoading && $document->isGhost()) {
+        if ($document instanceof Entity\LazyLoading && $document->isGhost()) {
             throw new \Exception("Unable to save: This " . get_class($document) . " entity isn't fully loaded. "
                 . "First expand, than edit, than save.");
         }
@@ -83,7 +83,7 @@ trait BasicImplementation
     public static function delete($document)
     {
         if (!$document instanceof Entity\Identifiable) {
-            throw new Exception("A " . get_class($document) . " isn't identifiable");
+            throw new \Exception("A " . get_class($document) . " isn't identifiable");
         }
         
         $filter = [$document->getIdProperty() => $document->getId()];
