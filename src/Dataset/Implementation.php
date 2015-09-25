@@ -3,7 +3,6 @@
 namespace Jasny\DB\Mongo\Dataset;
 
 use Jasny\DB\Mongo\DB,
-    Jasny\DB\EntitySet,
     Jasny\DB\Entity\Identifiable,
     Jasny\DB\Dataset\Sorted;
 

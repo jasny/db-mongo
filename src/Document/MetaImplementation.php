@@ -120,8 +120,8 @@ trait MetaImplementation
     /**
      * Filter object for json serialization
      * 
-     * @param object $object
-     * @return object
+     * @param stdClass $object
+     * @return stdClass
      */
     protected function jsonSerializeFilter($object)
     {

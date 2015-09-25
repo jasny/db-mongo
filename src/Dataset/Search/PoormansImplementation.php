@@ -3,7 +3,6 @@
 namespace Jasny\DB\Mongo\Dataset\Search;
 
 use Jasny\Meta\TypedObject,
-    Jasny\DB\Mongo\Dataset,
     Jasny\DB\EntitySet;
 
 /**
