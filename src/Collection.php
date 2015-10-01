@@ -120,35 +120,7 @@ class Collection extends \MongoCollection
         }
         
         return $ret;
-    }
-
-    /**
-     * Saves a document to this collection
-     * 
-     * @param array $docs     Array of arrays or objects to save.
-     * @param array $options  Options for the save.
-     * @return mixed
-     */
-    public function batchInsert(&$docs, array $options = [])
-    {
-        $rows = [];
-        foreach ($docs as $i => $doc) {
-            $rows[$i] = $this->db->toMongoType($doc);
-        }
-        
-        $ret = parent::save($rows, $options);
-        
-        foreach ($rows as $i => $row) {
-            if (is_array($doc)) {
-                $docs[$i]['_id'] = $row['_id'];
-            } else {
-                $docs[$i]->_id = $row['_id'];
-            }
-        }
-        
-        return $ret;
-    }
-    
+    }    
     
     /**
      * Convert values to a document
