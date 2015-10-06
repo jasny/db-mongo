@@ -126,7 +126,7 @@ trait MetaImplementation
     protected function jsonSerializeFilter(\stdClass $object)
     {
         foreach ($object as $prop => $value) {
-            if (static::meta()->of($prop)['ignore']) {
+            if (static::meta()->of($prop)['censor']) {
                 unset($object->$prop);
             }
         }
