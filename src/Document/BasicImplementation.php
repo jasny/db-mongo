@@ -106,7 +106,10 @@ trait BasicImplementation
      */
     public function delete(array $opts = [])
     {
-        static::getCollection()->remove([static::getIdProperty() => $this->getId()]);
+        $filter = [static::getIdProperty() => $this->getId()];
+        $query = static::mapToFields($filter);
+        
+        static::getCollection()->remove($query);
         return $this;
     }
 
