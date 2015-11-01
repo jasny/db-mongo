@@ -78,7 +78,7 @@ trait PoormansImplementation
     public static function search($terms, $filter, $sort = null, $limit = null, array $opts = [])
     {
         $collection = static::getCollection();
-        $query = static::searchQuery($terms) + static::filterToQuery($filter, $opts);
+        $query = static::searchQuery($terms) + static::filterToQuery((array)$filter, $opts);
         
         if (is_a(get_called_class(), Dataset\Sorted::class, true)) {
             $sort = (array)$sort + static::getDefaultSorting();
