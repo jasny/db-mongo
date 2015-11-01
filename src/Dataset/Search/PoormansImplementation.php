@@ -3,7 +3,8 @@
 namespace Jasny\DB\Mongo\Dataset\Search;
 
 use Jasny\Meta\TypedObject;
-use Jasny\DB\Dataset;
+use Jasny\DB\Mongo\DB;
+use Jasny\DB\Dataset\Sorted;
 
 /**
  * Poorman's search implementation
@@ -78,19 +79,27 @@ trait PoormansImplementation
     public static function search($terms, $filter, $sort = null, $limit = null, array $opts = [])
     {
         $collection = static::getCollection();
+        
+        // Query
         $query = static::searchQuery($terms) + static::filterToQuery((array)$filter, $opts);
-        
-        if (is_a(get_called_class(), Dataset\Sorted::class, true)) {
-            $sort = (array)$sort + static::getDefaultSorting();
-        }
-        
-        list($lmt, $offset) = (array)$limit + [null, null];
-        
-        $cursor = $collection->find($query, [], $sort, $lmt, $offset);
-        
+        $cursor = $collection->find($query);
+
         $totalFn = function() use($collection, $query) {
             return $collection->count($query);
         };
+        
+        // Sort
+        if (is_a(get_called_class(), Sorted::class, true)) {
+            $sort = (array)$sort + static::getDefaultSorting();
+        }
+        if (isset($sort)) $querySort = DB::sortToQuery($sort);
+        if (!empty($querySort)) $cursor->sort($querySort);
+        
+        // Limit / skip
+        list($limit, $skip) = (array)$limit + [null, null];
+        
+        if (isset($limit)) $cursor->limit($limit);
+        if (isset($skip)) $cursor->skip($skip);
         
         $class = self::getDocumentClass();
         return $class::entitySet($cursor, $totalFn);
