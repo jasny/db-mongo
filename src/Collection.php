@@ -3,6 +3,7 @@
 namespace Jasny\DB\Mongo;
 
 use Jasny\DB\Mongo\Cursor;
+use Jasny\DB\Entity;
 
 /**
  * Mongo collection which produces Document objects
@@ -14,14 +15,7 @@ use Jasny\DB\Mongo\Cursor;
 class Collection extends \MongoCollection
 {
     /**
-     * Collections that have been indexed
-     * @var array
-     */
-    protected static $indexed = [];
-    
-    
-    /**
-     * Record class
+     * Entity class
      * @var string
      */
     protected $documentClass;
@@ -33,8 +27,8 @@ class Collection extends \MongoCollection
      */
     public function __construct(\MongoDB $db, $name, $documentClass = null)
     {
-        if (isset($documentClass) && !is_a($documentClass, 'Jasny\DB\Entity', true)) {
-            throw new \Exception("Class $documentClass is not a Jasny\DB\Entity");
+        if (isset($documentClass) && !is_a($documentClass, Entity::class, true)) {
+            throw new \LogicException("Class $documentClass is not a " . Entity::class);
         }
         
         $this->documentClass = $documentClass;
@@ -48,17 +42,12 @@ class Collection extends \MongoCollection
      */
     public function createIndexes(array $indexes)
     {
-        // Prevent re-applying the same indexes this request
-        if (static::$indexed[$this->getName()] === $indexes) return;
-        
         foreach ($indexes as $index) {
             $options = isset($index['$options']) ? $index['$options'] : [];
             unset($index['$options']);
 
             $this->createIndex($index, $options);
         }
-        
-        static::$indexed[$this->getName()] = $indexes;
     }
     
     /**
@@ -77,18 +66,33 @@ class Collection extends \MongoCollection
         if (!empty($options['delete'])) return $this->deleteIndex($keys);
         
         // BC
-        $fn = method_exists(get_parent_class(), 'createIndex') ? 'createIndex' : 'ensureIndex';
+        $fn = method_exists(\MongoCollection::class, 'createIndex') ? 'createIndex' : 'ensureIndex';
 
         try {
-            $ret = call_user_func(['MongoCollection', $fn], $keys, $options);
+            $ret = call_user_func([\MongoCollection::class, $fn], $keys, $options);
         } catch (\MongoCursorException $e) {
             if (empty($options['force']) || $e->getCode() != 85) throw $e;
 
             $this->deleteIndex($keys);
-            call_user_func(['MongoCollection', $fn], $keys, $options);
+            call_user_func([\MongoCollection::class, $fn], $keys, $options);
         }
         
         return $ret;
+    }
+    
+    
+    /**
+     * Get a Collection object where casting to a document object is disabled
+     *
+     * @return static
+     */
+    public function withoutCasting()
+    {
+        if (!isset($this->documentClass)) return $this;
+    
+        $collection = clone $this;
+        $collection->documentClass = null;
+        return $collection;
     }
 
     /**
@@ -126,17 +130,29 @@ class Collection extends \MongoCollection
      * Convert values to a document
      * 
      * @param array $values
+     * @param boolean $lazy
      * @return Entity
      */
-    public function asDocument(array $values)
+    public function asDocument(array $values, $lazy = false)
     {
+        if (!isset($this->documentClass)) {
+            throw new \LogicException("Document class not set");
+        }
+        
+        $class = $this->documentClass;
+        if (!is_a($class, Entity::class, true)) {
+            throw new \LogicException("Document class should implement the " . Entity::class . " interface");
+        }
+
+        if ($lazy && !is_a($class, Entity\LazyLoading::class, true)) {
+            $msg = Entity::class . " doesn't support lazy loading. All fields are required to create the entity.";
+            throw new \LogicException($msg);
+        }
+        
         foreach ($values as &$value) {
             $value = $this->db->fromMongoType($value);
         }
         
-        if (!isset($this->documentClass)) return (object)$values;
-        
-        $class = $this->documentClass;
         return $class::fromData($values);
     }
 
@@ -165,6 +181,12 @@ class Collection extends \MongoCollection
     public function findOne($query = [], array $fields = [])
     {
         $values = parent::findOne($query, $fields);
-        return isset($values) && empty($fields) ? $this->asDocument($values) : $values;
+        
+        if (isset($this->documentClass) && isset($values)) {
+            $values = $this->asDocument($values, !empty($fields));
+        }
+        
+        return $values;
     }
 }
+

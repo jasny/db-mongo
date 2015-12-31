@@ -18,6 +18,12 @@ class Cursor extends \MongoCursor
     protected $collection;
 
     /**
+     * Is lazy load
+     * @var boolean
+     */
+    protected $lazy = false;
+
+    /**
      * Class constructor
      * 
      * @param \MongoClient      $connection
@@ -27,7 +33,9 @@ class Cursor extends \MongoCursor
      */
     public function __construct(\MongoClient $connection, $ns, array $query = [], array $fields = [])
     {
-        if ($ns instanceof Collection && empty($fields)) $this->collection = $ns;
+        if ($ns instanceof Collection) $this->collection = $ns;
+        $this->lazy = !empty($fields);
+        
         parent::__construct($connection, (string)$ns, $query, $fields);
     }
 
@@ -49,11 +57,10 @@ class Cursor extends \MongoCursor
     public function current()
     {
         $values = parent::current();
-        if (!isset($values)) return;
         
-        return isset($this->collection) && isset($values['_id'])
-            ? $this->collection->asDocument($values)
-            : DB::fromMongoType($values);
+        if (isset($values) && isset($this->collection) && $this->collection->getDocumentClass()) {
+            return $this->collection->asDocument($values, $this->lazy);
+        }
     }
     
     /**
