@@ -118,23 +118,6 @@ trait MetaImplementation
     }
     
     /**
-     * Filter object for json serialization
-     * 
-     * @param \stdClass $object
-     * @return \stdClass
-     */
-    protected function jsonSerializeFilter(\stdClass $object)
-    {
-        foreach ($object as $prop => $value) {
-            if (static::meta()->of($prop)['censor']) {
-                unset($object->$prop);
-            }
-        }
-        
-        return $object;
-    }
-    
-    /**
      * Cast value to a non-internal type
      * 
      * @param mixed  $value
