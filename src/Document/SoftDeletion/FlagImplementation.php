@@ -24,13 +24,15 @@ trait FlagImplementation
     {
         $filter = static::castForDB($filter);
         $filter = static::mapToFields($filter);
+
+        $opts += ['deleted' => false]; // Defaults to no deleted
         
-        if (in_array('from-trash', $opts)) {
+        if ($opts['deleted'] === 'only' || in_array('from-trash', $opts, true)) {
             $filter['_deleted'] = true;
-        } elseif (!in_array('include-trash', $opts)) {
+        } elseif ($opts['deleted'] !== 'included' && !in_array('include-trash', $opts, true)) {
             $filter['_deleted'] = null;
         }
-        
+                
         return DB::filterToQuery($filter);
     }
 
