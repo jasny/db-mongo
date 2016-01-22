@@ -46,6 +46,11 @@ class Collection extends \MongoCollection
             $options = isset($index['$options']) ? $index['$options'] : [];
             unset($index['$options']);
 
+            if (!empty($options['delete'])) {
+                $this->deleteIndex($index);
+                continue;
+            }
+
             $this->createIndex($index, $options);
         }
     }
@@ -54,27 +59,29 @@ class Collection extends \MongoCollection
      * Creates an index on the specified field(s) if it does not already exist. 
      * 
      * Additinal options are available:
-     *   delete: true - Delete index instead of creating it
+     *   ignore: true - No error if the index already exists
      *   force: true  - Delete existing index if needed
      * 
      * @param array $keys
      * @param array $options
+     * @return boolean
      */
     public function createIndex(array $keys, array $options = [])
     {
-        // Drop instead of create
-        if (!empty($options['delete'])) return $this->deleteIndex($keys);
-        
+        $ret = false;
+
         // BC
         $fn = method_exists(\MongoCollection::class, 'createIndex') ? 'createIndex' : 'ensureIndex';
 
         try {
             $ret = call_user_func([\MongoCollection::class, $fn], $keys, $options);
         } catch (\MongoCursorException $e) {
-            if (empty($options['force']) || $e->getCode() != 85) throw $e;
-
-            $this->deleteIndex($keys);
-            call_user_func([\MongoCollection::class, $fn], $keys, $options);
+            if ($e->getCode() != 85 || (empty($options['ignore']) && empty($options['force']))) throw $e;
+            
+            if (!empty($options['force'])) {
+                $this->deleteIndex($keys);
+                call_user_func([\MongoCollection::class, $fn], $keys, $options);
+            }
         }
         
         return $ret;

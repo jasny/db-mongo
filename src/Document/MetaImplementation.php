@@ -17,6 +17,7 @@ trait MetaImplementation
         BasicImplementation::setValues as private _basic_setValues;
         Entity\Meta\Implementation::castValueToClass as private _entityMeta_castValueToClass;
         Entity\Meta\Implementation::entitySet insteadof BasicImplementation;
+        Entity\Meta\Implementation::jsonSerializeFilter insteadof BasicImplementation;
     }
     
     /**
