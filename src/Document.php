@@ -13,6 +13,7 @@ abstract class Document implements
     Entity\ChangeAware,
     Entity\Meta,
     FieldMapping,
+    Entity\SelfAware,
     Entity\LazyLoading,
     Entity\Validation
 {
