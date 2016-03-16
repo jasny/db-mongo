@@ -17,7 +17,7 @@
         "source": "https://github.com/jasny/db-mongo"
     },
     "require": {
-        "php": ">=5.4.0",
+        "php": ">=5.6.0",
         "jasny/db": "^2.2.1",
         "jasny/meta": "^1.2.0",
         "doctrine/inflector": "^1.0"
