@@ -18,8 +18,8 @@
     },
     "require": {
         "php": ">=5.6.0",
-        "jasny/db": "^2.2.1",
-        "jasny/meta": "^1.2.0",
+        "jasny/db": "^2.4.0",
+        "jasny/meta": "~2.0.0",
         "doctrine/inflector": "^1.0"
     },
     "require-dev": {
