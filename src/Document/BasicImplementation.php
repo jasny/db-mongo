@@ -2,10 +2,11 @@
 
 namespace Jasny\DB\Mongo\Document;
 
-use Jasny\DB\Entity,
-    Jasny\DB\FieldMapping,
-    Jasny\DB\Mongo\Dataset,
-    Jasny\DB\Dataset\Sorted;
+use Jasny\DB\Data;
+use Jasny\DB\Entity;
+use Jasny\DB\FieldMapping;
+use Jasny\DB\Mongo\Dataset;
+use Jasny\DB\Dataset\Sorted;
 
 /**
  * Static methods to interact with a collection (as document)
@@ -62,9 +63,18 @@ trait BasicImplementation
      */
     public function toData()
     {
-        $values = $this->getValues();
+        $values = call_user_func('get_object_vars', $this);
+        
         $casted = static::castForDB($values);
         $data = static::mapToFields($casted);
+
+        foreach ($data as &$item) {
+            if ($item instanceof Entity\Identifiable) {
+                $item = $item->getId();
+            } elseif ($item instanceof Data) {
+                $item = $item->toData();
+            }
+        }
         
         if ($this instanceof Sorted && method_exists($this, 'prepareDataForSort')) {
             $data += static::prepareDataForSort($this);
