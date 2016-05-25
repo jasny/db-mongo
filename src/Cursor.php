@@ -59,8 +59,10 @@ class Cursor extends \MongoCursor
         $values = parent::current();
         
         if (isset($values) && isset($this->collection) && $this->collection->getDocumentClass()) {
-            return $this->collection->asDocument($values, $this->lazy);
+            $values = $this->collection->asDocument($values, $this->lazy);
         }
+        
+        return $values;
     }
     
     /**

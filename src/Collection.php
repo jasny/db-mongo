@@ -95,11 +95,7 @@ class Collection extends \MongoCollection
      */
     public function withoutCasting()
     {
-        if (!isset($this->documentClass)) return $this;
-    
-        $collection = clone $this;
-        $collection->documentClass = null;
-        return $collection;
+        return new static($this->db, $this->getName());
     }
 
     /**
