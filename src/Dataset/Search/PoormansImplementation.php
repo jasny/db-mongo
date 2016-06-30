@@ -2,7 +2,7 @@
 
 namespace Jasny\DB\Mongo\Dataset\Search;
 
-use Jasny\Meta\TypedObject;
+use Jasny\Meta\TypeCasting;
 use Jasny\DB\Mongo\DB;
 use Jasny\DB\Dataset\Sorted;
 
@@ -21,7 +21,7 @@ trait PoormansImplementation
         if (isset(static::$searchFields)) return static::$searchFields;
 
         $class = static::getDocumentClass();
-        if (!is_a($class, TypedObject::class, true)) return [];
+        if (!is_a($class, TypeCasting::class, true)) return [];
 
         $fields = [];
         foreach ($class::meta()->ofProperties() as $prop => $meta) {
