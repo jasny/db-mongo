@@ -2,6 +2,7 @@
 
 namespace Jasny\DB\Mongo\Document;
 
+use Jasny\Meta;
 use Jasny\DB\Data;
 use Jasny\DB\Entity;
 use Jasny\DB\FieldMapping;
@@ -65,22 +66,34 @@ trait BasicImplementation
     {
         $values = call_user_func('get_object_vars', $this);
         
-        $casted = static::castForDB($values);
-        $data = static::mapToFields($casted);
-
-        foreach ($data as &$item) {
+        foreach ($values as &$item) {
             if ($item instanceof Entity\Identifiable) {
-                $item = $item->getId();
+                if (
+                    $item instanceof Meta\Introspection &&
+                    is_scalar($item::getIdProperty()) &&
+                    $item::meta()->ofProperty($item::getIdProperty())['dbFieldType'] === '\MongoId'
+                ) {
+                    $item = new \MongoId($item->getId());
+                } else {
+                    $item = $item->getId();
+                }
+                
             } elseif ($item instanceof Data) {
                 $item = $item->toData();
             }
         }
         
         if ($this instanceof Sorted && method_exists($this, 'prepareDataForSort')) {
-            $data += static::prepareDataForSort($this);
+            $values += static::prepareDataForSort($this);
+        }
+
+        $casted = static::castForDB($values);
+        $data = static::mapToFields($casted);
+        
+        if (array_key_exists('_id', $data) && is_null($data['_id'])) {
+            unset($data['_id']);
         }
         
-        if (array_key_exists('_id', $data) && is_null($data['_id'])) unset($data['_id']);
         return $data;
     }
 

@@ -16,7 +16,7 @@ trait MetaImplementation
         Entity\Validation\MetaImplementation
     {
         BasicImplementation::setValues as private _basic_setValues;
-        Entity\Meta\Implementation::jsonSerializeFilter insteadof BasicImplementation;
+        BasicImplementation::jsonSerializeFilter insteadof Entity\Meta\Implementation;
     }
     
     /**
