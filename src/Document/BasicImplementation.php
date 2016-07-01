@@ -5,6 +5,7 @@ namespace Jasny\DB\Mongo\Document;
 use Jasny\Meta;
 use Jasny\DB\Data;
 use Jasny\DB\Entity;
+use Jasny\DB\EntitySet;
 use Jasny\DB\FieldMapping;
 use Jasny\DB\Mongo\Dataset;
 use Jasny\DB\Dataset\Sorted;
