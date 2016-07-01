@@ -68,16 +68,13 @@ trait BasicImplementation
         
         foreach ($values as &$item) {
             if ($item instanceof Entity\Identifiable) {
-                if (
-                    $item instanceof Meta\Introspection &&
-                    is_scalar($item::getIdProperty()) &&
-                    $item::meta()->ofProperty($item::getIdProperty())['dbFieldType'] === '\MongoId'
-                ) {
-                    $item = new \MongoId($item->getId());
-                } else {
-                    $item = $item->getId();
+                $item = static::childEntityToId($item);
+            } elseif ($item instanceof EntitySet && is_a($item->getEntityClass(), Entity\Identifiable::class, true)) {
+                $ids = [];
+                foreach ($item as $child) {
+                    $ids[] = static::childEntityToId($child);
                 }
-                
+                $item = $ids;
             } elseif ($item instanceof Data) {
                 $item = $item->toData();
             }
@@ -95,6 +92,27 @@ trait BasicImplementation
         }
         
         return $data;
+    }
+
+    /**
+     * Convert child to an id
+     * 
+     * @param Entity $item
+     * @return \MongoId|mixed
+     */
+    protected static function childEntityToId(Entity $item)
+    {
+        if (
+            $item instanceof Meta\Introspection &&
+            is_scalar($item::getIdProperty()) &&
+            $item::meta()->ofProperty($item::getIdProperty())['dbFieldType'] === '\MongoId'
+        ) {
+            $id = new \MongoId($item->getId());
+        } else {
+            $id = $item->getId();
+        }
+        
+        return $id;
     }
 
     
