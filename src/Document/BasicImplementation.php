@@ -148,7 +148,8 @@ trait BasicImplementation
      */
     public function delete(array $opts = [])
     {
-        $filter = [static::getIdProperty() => $this->childEntityToId($this)];
+        $properties = [static::getIdProperty() => $this->getId()];
+        $filter = static::castForDB($properties);
         $query = static::mapToFields($filter);
         
         static::getCollection()->remove($query);
