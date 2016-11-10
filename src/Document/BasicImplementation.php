@@ -9,6 +9,7 @@ use Jasny\DB\EntitySet;
 use Jasny\DB\FieldMapping;
 use Jasny\DB\Mongo\Dataset;
 use Jasny\DB\Dataset\Sorted;
+use Jasny\DB\Entity\ChangeAware;
 
 /**
  * Static methods to interact with a collection (as document)
@@ -131,7 +132,12 @@ trait BasicImplementation
         }
         
         $data = $this->toData();
-        static::getCollection()->save($data);
+        
+        if ($this instanceof ChangeAware && $this->isNew()) {
+            static::getCollection()->insert($data);
+        } else {
+            static::getCollection()->save($data);
+        }
         
         $idProp = static::getIdProperty();
         $this->$idProp = $data['_id'];
