@@ -108,26 +108,87 @@ class Collection extends \MongoCollection
         return $this->documentClass;
     }
     
+    
     /**
-     * Saves a document to this collection
+     * Insert a document to this collection
+     * @link http://php.net/manual/en/mongocollection.insert.php
      * 
      * @param array|object $doc      Array or object to save.
      * @param array        $options  Options for the save.
+     * @return array|boolean
+     */
+    public function insert(&$doc, array $options = [])
+    {
+        $values = $this->db->toMongoType($doc);
+        $ret = parent::insert($values, $options);
+        
+        $this->setDocId($doc, $values);
+        
+        return $ret;
+    }
+    
+    /**
+     * Inserts multiple documents into this collection
+     * @link http://php.net/manual/en/mongocollection.batchinsert.php
+     * 
+     * @param array $docs
+     * @param array $options
      * @return mixed
+     */
+    public function batchInsert(array &$docs, array $options = [])
+    {
+        $a = [];
+        
+        foreach ($docs as $doc) {
+            $a[] = $this->db->toMongoType($doc);
+        }
+        
+        $ret = parent::batchInsert($a, $options);
+        
+        foreach ($a as $i => $values) {
+            $this->setDocId($docs[$i], $values);
+        }
+        
+        return $ret;
+    }
+    
+    /**
+     * Saves a document to this collection
+     * @link http://php.net/manual/en/mongocollection.save.php
+     * 
+     * @param array|object $doc      Array or object to save.
+     * @param array        $options  Options for the save.
+     * @return array|boolean
      */
     public function save(&$doc, array $options = [])
     {
         $values = $this->db->toMongoType($doc);
         $ret = parent::save($values, $options);
         
+        $this->setDocId($doc, $values);
+        
+        return $ret;
+    }
+    
+    /**
+     * Update the identifier
+     * 
+     * @param array|object $doc
+     * @param array        $values
+     */
+    protected function setDocId(&$doc, $values)
+    {
+        if (!isset($values['_id'])) {
+            return;
+        }
+        
         if (is_array($doc)) {
             $doc['_id'] = $values['_id'];
         } else {
             $doc->_id = $values['_id'];
         }
-        
-        return $ret;
-    }    
+    }
+    
     
     /**
      * Convert values to a document
