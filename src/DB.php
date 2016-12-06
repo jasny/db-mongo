@@ -83,16 +83,42 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         return $this->selectCollection($name);
     }
     
+    /**
+     * Check if value is a MongoDB specific type
+     * 
+     * @param mixed $value
+     * @return boolean
+     */
+    protected static function isMongoType($value)
+    {
+        return
+            $value instanceof \MongoBinData ||
+            $value instanceof \MongoDate ||
+            $value instanceof \MongoDBRef ||
+            $value instanceof \MongoInt32 ||
+            $value instanceof \MongoInt64 ||
+            $value instanceof \MongoId ||
+            $value instanceof \MongoMaxKey ||
+            $value instanceof \MongoMinKey ||
+            $value instanceof \MongoRegex ||
+            $value instanceof \MongoTimestamp;
+    }
+    
     
     /**
      * Convert property to mongo type.
      * Works recursively for objects and arrays.
      * 
-     * @param mixed $value
+     * @param mixed   $value
+     * @param boolean $escapeKeys  Escape '.' and '$'
      * @return mixed
      */
-    public static function toMongoType($value)
+    public static function toMongoType($value, $escapeKeys = false)
     {
+        if (static::isMongoType($value)) {
+            return $value;
+        }
+        
         if ($value instanceof \DateTime) {
             return new \MongoDate($value->getTimestamp());
         }
@@ -110,12 +136,21 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         
         if ($value instanceof \ArrayObject || $value instanceof EntitySet) {
             $value = $value->getArrayCopy();
-        } 
+        }
         
-        if (is_array($value) || is_object($value)) {
-            foreach ($value as &$v) {
-                $v = static::toMongoType($v);
+        if (is_object($value) && !$value instanceof stdClass) {
+            throw new \MongoException("Don't know how to cast a " . get_class($value) . " object to a mongo type");
+        }
+        
+        if (is_array($value) || $value instanceof \stdClass) {
+            $copy = [];
+            
+            foreach ($value as $k => $v) {
+                $key = $escapeKeys ? strtr($k, ['\\' => '\\\\', '$' => '\\u0024', '.' => '\\u002e']) : $k;
+                $copy[$key] = static::toMongoType($v, $escapeKeys); // Recursion
             }
+            
+            $value = is_object($value) ? (object)$copy : $copy;
         }
         
         return $value;
@@ -124,22 +159,26 @@ class DB extends \MongoDB implements Connection, Connection\Namable
     /**
      * Convert mongo type to value
      * 
-     * @param mixed $value
+     * @param mixed   $value
+     * @param boolean $translateKeys
      * @return mixed
      */
     public static function fromMongoType($value)
     {
         if (is_array($value) || $value instanceof \stdClass) {
+            $out = [];
+            
+            foreach ($value as $k => $v) {
+                // Unescape special characters in keys
+                $key = strpos($k, '\\\\') !== false ? json_decode('"' . addcslashes($k, '"') . '"') : $k;
+                
+                $out[$key] = self::fromMongoType($v); // Recursion
+            }
+            
             $isNumeric = is_array($value) && (key($value) === 0 &&
                 array_keys($value) === array_keys(array_fill(0, count($value), null))) || !count($value);
             
-            $out = !$isNumeric ? (object)$value : $value;
-            
-            foreach ($out as &$var) {
-                $var = self::fromMongoType($var);
-            }
-            
-            return $out;
+            return !$isNumeric ? (object)$out : $out;
         }
         
         if ($value instanceof \MongoDate) {

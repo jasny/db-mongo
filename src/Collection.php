@@ -119,7 +119,7 @@ class Collection extends \MongoCollection
      */
     public function insert(&$doc, array $options = [])
     {
-        $values = $this->db->toMongoType($doc);
+        $values = $this->db->toMongoType($doc, true);
         $ret = parent::insert($values, $options);
         
         $this->setDocId($doc, $values);
@@ -140,7 +140,7 @@ class Collection extends \MongoCollection
         $a = [];
         
         foreach ($docs as $doc) {
-            $a[] = $this->db->toMongoType($doc);
+            $a[] = $this->db->toMongoType($doc, true);
         }
         
         $ret = parent::batchInsert($a, $options);
@@ -162,7 +162,7 @@ class Collection extends \MongoCollection
      */
     public function save(&$doc, array $options = [])
     {
-        $values = $this->db->toMongoType($doc);
+        $values = $this->db->toMongoType($doc, true);
         $ret = parent::save($values, $options);
         
         $this->setDocId($doc, $values);

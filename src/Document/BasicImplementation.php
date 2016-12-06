@@ -66,7 +66,7 @@ trait BasicImplementation
      */
     public function toData()
     {
-        $values = call_user_func('get_object_vars', $this);
+        $values = call_user_func('get_object_vars', $this); // `call_user_func` is used to only get public properties
         
         foreach ($values as &$item) {
             if ($item instanceof Entity\Identifiable) {
