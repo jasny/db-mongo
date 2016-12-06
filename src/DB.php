@@ -83,6 +83,27 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         return $this->selectCollection($name);
     }
     
+    /**
+     * Check if value is a MongoDB specific type
+     * 
+     * @param mixed $value
+     * @return boolean
+     */
+    protected static function isMongoType($value)
+    {
+        return
+            $value instanceof \MongoBinData ||
+            $value instanceof \MongoDate ||
+            $value instanceof \MongoDBRef ||
+            $value instanceof \MongoInt32 ||
+            $value instanceof \MongoInt64 ||
+            $value instanceof \MongoId ||
+            $value instanceof \MongoMaxKey ||
+            $value instanceof \MongoMinKey ||
+            $value instanceof \MongoRegex ||
+            $value instanceof \MongoTimestamp;
+    }
+    
     
     /**
      * Convert property to mongo type.
@@ -94,6 +115,10 @@ class DB extends \MongoDB implements Connection, Connection\Namable
      */
     public static function toMongoType($value, $escapeKeys = false)
     {
+        if (static::isMongoType($value)) {
+            return $value;
+        }
+        
         if ($value instanceof \DateTime) {
             return new \MongoDate($value->getTimestamp());
         }
@@ -111,9 +136,13 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         
         if ($value instanceof \ArrayObject || $value instanceof EntitySet) {
             $value = $value->getArrayCopy();
-        } 
+        }
         
-        if (is_array($value) || is_object($value)) {
+        if (is_object($value) && !$value instanceof stdClass) {
+            throw new \MongoException("Don't know how to cast a " . get_class($value) . " object to a mongo type");
+        }
+        
+        if (is_array($value) || $value instanceof \stdClass) {
             $copy = [];
             
             foreach ($value as $k => $v) {
@@ -140,7 +169,9 @@ class DB extends \MongoDB implements Connection, Connection\Namable
             $out = [];
             
             foreach ($value as $k => $v) {
-                $key = json_decode('"' . addcslashes($k, '"') . '"'); // Unescape keys
+                // Unescape special characters in keys
+                $key = strpos($k, '\\\\') !== false ? json_decode('"' . addcslashes($k, '"') . '"') : $k;
+                
                 $out[$key] = self::fromMongoType($v); // Recursion
             }
             
