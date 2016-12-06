@@ -85,6 +85,19 @@ class DB extends \MongoDB implements Connection, Connection\Namable
     
     
     /**
+     * Get translation for reserved characters in keys
+     * 
+     * @return array
+     */
+    protected static function getKeyTranslations()
+    {
+        $dot = html_entity_decode("&#10050;"); // Circled open centre eight pointed star
+        $dollar = html_entity_decode('&#9812;'); // Chess king
+
+        return ['.' => $dot, '$' => $dollar];
+    }
+    
+    /**
      * Convert property to mongo type.
      * Works recursively for objects and arrays.
      * 
@@ -113,9 +126,15 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         } 
         
         if (is_array($value) || is_object($value)) {
-            foreach ($value as &$v) {
-                $v = static::toMongoType($v);
+            $copy = [];
+            
+            
+            foreach ($value as $k => $v) {
+                $key = strtr($k, static::getKeyTranslations());
+                $copy[$key] = static::toMongoType($v); // Recursion
             }
+            
+            $value = is_object($value) ? (object)$copy : $copy;
         }
         
         return $value;
@@ -130,16 +149,17 @@ class DB extends \MongoDB implements Connection, Connection\Namable
     public static function fromMongoType($value)
     {
         if (is_array($value) || $value instanceof \stdClass) {
+            $out = [];
+            
+            foreach ($value as $k => $v) {
+                $key = strtr($k, array_flip(static::getKeyTranslations()));
+                $out[$key] = self::fromMongoType($v); // Recursion
+            }
+            
             $isNumeric = is_array($value) && (key($value) === 0 &&
                 array_keys($value) === array_keys(array_fill(0, count($value), null))) || !count($value);
             
-            $out = !$isNumeric ? (object)$value : $value;
-            
-            foreach ($out as &$var) {
-                $var = self::fromMongoType($var);
-            }
-            
-            return $out;
+            return !$isNumeric ? (object)$out : $out;
         }
         
         if ($value instanceof \MongoDate) {
