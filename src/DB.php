@@ -85,19 +85,6 @@ class DB extends \MongoDB implements Connection, Connection\Namable
     
     
     /**
-     * Get translation for reserved characters in keys
-     * 
-     * @return array
-     */
-    protected static function getKeyTranslations()
-    {
-        $dot = html_entity_decode("&#10050;"); // Circled open centre eight pointed star
-        $dollar = html_entity_decode('&#9812;'); // Chess king
-
-        return ['.' => $dot, '$' => $dollar];
-    }
-    
-    /**
      * Convert property to mongo type.
      * Works recursively for objects and arrays.
      * 
@@ -128,9 +115,8 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         if (is_array($value) || is_object($value)) {
             $copy = [];
             
-            
             foreach ($value as $k => $v) {
-                $key = strtr($k, static::getKeyTranslations());
+                $key = strtr($k, ['\\' => '\\\\', '$' => '\\u0024', '.' => '\\u002e']); // Escape reserve characters
                 $copy[$key] = static::toMongoType($v); // Recursion
             }
             
@@ -143,7 +129,8 @@ class DB extends \MongoDB implements Connection, Connection\Namable
     /**
      * Convert mongo type to value
      * 
-     * @param mixed $value
+     * @param mixed   $value
+     * @param boolean $translateKeys
      * @return mixed
      */
     public static function fromMongoType($value)
@@ -152,7 +139,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
             $out = [];
             
             foreach ($value as $k => $v) {
-                $key = strtr($k, array_flip(static::getKeyTranslations()));
+                $key = json_decode('"' . addcslashes($k, '"') . '"');
                 $out[$key] = self::fromMongoType($v); // Recursion
             }
             
