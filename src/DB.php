@@ -88,10 +88,11 @@ class DB extends \MongoDB implements Connection, Connection\Namable
      * Convert property to mongo type.
      * Works recursively for objects and arrays.
      * 
-     * @param mixed $value
+     * @param mixed   $value
+     * @param boolean $escapeKeys  Escape '.' and '$'
      * @return mixed
      */
-    public static function toMongoType($value)
+    public static function toMongoType($value, $escapeKeys = false)
     {
         if ($value instanceof \DateTime) {
             return new \MongoDate($value->getTimestamp());
@@ -116,8 +117,8 @@ class DB extends \MongoDB implements Connection, Connection\Namable
             $copy = [];
             
             foreach ($value as $k => $v) {
-                $key = strtr($k, ['\\' => '\\\\', '$' => '\\u0024', '.' => '\\u002e']); // Escape reserve characters
-                $copy[$key] = static::toMongoType($v); // Recursion
+                $key = $escapeKeys ? strtr($k, ['\\' => '\\\\', '$' => '\\u0024', '.' => '\\u002e']) : $k;
+                $copy[$key] = static::toMongoType($v, $escapeKeys); // Recursion
             }
             
             $value = is_object($value) ? (object)$copy : $copy;
@@ -139,7 +140,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
             $out = [];
             
             foreach ($value as $k => $v) {
-                $key = json_decode('"' . addcslashes($k, '"') . '"');
+                $key = json_decode('"' . addcslashes($k, '"') . '"'); // Unescape keys
                 $out[$key] = self::fromMongoType($v); // Recursion
             }
             
