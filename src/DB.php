@@ -138,7 +138,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
             $value = $value->getArrayCopy();
         }
         
-        if (is_object($value) && !$value instanceof stdClass) {
+        if (is_object($value) && !$value instanceof \stdClass) {
             throw new \MongoException("Don't know how to cast a " . get_class($value) . " object to a mongo type");
         }
         
