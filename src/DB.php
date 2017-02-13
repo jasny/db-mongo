@@ -210,13 +210,14 @@ class DB extends \MongoDB implements Connection, Connection\Namable
             $value = static::toMongoType($filterVal);
             
             switch ($operator) {
-                case '':     $query[$field] = $value; break;
-                case 'not':  $query[$field] = ['$ne' => $value]; break;
-                case 'min':  $query[$field] = ['$gte' => $value]; break;
-                case 'max':  $query[$field] = ['$lte' => $value]; break;
-                case 'any':  $query[$field] = ['$in' => $value]; break;
-                case 'none': $query[$field] = ['$nin' => $value]; break;
-                case 'all':  $query[$field] = ['$all' => $value]; break;
+                case '':       $query[$field] = $value; break;
+                case 'not':    $query[$field] = ['$ne' => $value]; break;
+                case 'min':    $query[$field] = ['$gte' => $value]; break;
+                case 'max':    $query[$field] = ['$lte' => $value]; break;
+                case 'any':    $query[$field] = ['$in' => $value]; break;
+                case 'none':   $query[$field] = ['$nin' => $value]; break;
+                case 'all':    $query[$field] = ['$all' => $value]; break;
+                case 'match':  $query[$field] = ['$elemMatch' => $value]; break;
             
                 default: throw new \Exception("Invalid filter key '$key'. Unknown operator '$operator'.");
             }
