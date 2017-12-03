@@ -1,4 +1,4 @@
 <?php
 
-$loader = require __DIR__ . '/../vendor/autoload.php';
-$loader->addPsr4('Jasny\\Controller\\', __DIR__ . '/support');
+require_once "vendor/autoload.php";
+require_once "tests/support/TestHelper.php";

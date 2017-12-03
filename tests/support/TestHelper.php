@@ -5,7 +5,7 @@ namespace Jasny\DB\Mongo;
 /**
  * Additional test methods
  */
-trait TestHelper
+abstract class TestHelper extends \PHPUnit_Framework_TestCase
 {
     /**
      * Set a private or protected property of the given object
