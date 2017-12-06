@@ -7,6 +7,8 @@ use Jasny\DB\Entity,
 
 /**
  * Base class for Mongo Documents
+ *
+ * @codeCoverageIgnore
  */
 abstract class Document implements
     Document\ActiveRecord,
@@ -25,7 +27,7 @@ abstract class Document implements
         fromData as private _fromData;
         lazyload as private _lazyload;
     }
-    
+
     /**
      * Class constructor
      */
@@ -33,24 +35,26 @@ abstract class Document implements
     {
         $this->cast();
     }
-    
+
     /**
      * Reload the entity
-     * 
+     *
      * @param array $opts
-     * @return $this
+     * @return $this|boolean
      */
     public function reload(array $opts = [])
     {
-        if (!$this->_reload($opts)) return false;
-        
+        if (!$this->_reload($opts)) {
+            return false;
+        }
+
         $this->markAsPersisted();
         return $this;
     }
-    
+
     /**
      * Save the document
-     * 
+     *
      * @param array $opts
      * @return $this
      */
@@ -58,15 +62,14 @@ abstract class Document implements
     {
         $this->_save($opts);
         $this->markAsPersisted();
-        
+
         return $this;
     }
-    
-    
+
     /**
      * Convert loaded values to an entity.
      * Calls the construtor *after* setting the properties.
-     * 
+     *
      * @param object $values
      * @return static
      */
@@ -74,24 +77,29 @@ abstract class Document implements
     {
         $entity = static::_fromData($values);
         $entity->markAsPersisted();
-        
+
         return $entity;
     }
-    
+
     /**
      * Create a ghost object.
-     * 
+     *
      * @param array|MongoId|mixed $values  Values or ID
      * @return static
      */
     public static function lazyload($values)
     {
-        if ($values instanceof \stdClass) $values = (array)$values;
-        if (is_array($values)) $values = static::mapFromFields($values);
-        
+        if ($values instanceof \stdClass) {
+            $values = (array)$values;
+        }
+
+        if (is_array($values)) {
+            $values = static::mapFromFields($values);
+        }
+
         $entity = static::_lazyload($values);
         $entity->cast();
-        
+
         return $entity;
     }
 }
