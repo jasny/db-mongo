@@ -18,21 +18,33 @@ trait MetaImplementation
         BasicImplementation::setValues as private _basic_setValues;
         BasicImplementation::jsonSerializeFilter insteadof Entity\Meta\Implementation;
     }
-    
+
     /**
      * Get the database connection
-     * 
+     *
+     * @codeCoverageIgnore
      * @return \Jasny\DB
      */
     protected static function getDB()
     {
-        $name = static::meta()['db'] ?: 'default';
+        $name = static::getDBName();
+
         return \Jasny\DB::conn($name);
     }
-    
+
+    /**
+     * Get name of database
+     *
+     * @return string
+     */
+    protected static function getDBName()
+    {
+        return static::meta()['db'] ?: 'default';
+    }
+
     /**
      * Get the Mongo collection name.
-     * 
+     *
      * @return string
      */
     protected static function getCollectionName()
@@ -46,13 +58,13 @@ trait MetaImplementation
             $plural = Inflector::pluralize($class);
             $name = Inflector::tableize($plural);
         }
-        
+
         return $name;
     }
-    
+
     /**
      * Cast data to use in DB
-     * 
+     *
      * @param array $data
      * @return array
      */
@@ -61,66 +73,69 @@ trait MetaImplementation
         foreach ($data as $key => &$value) {
             $prop = trim(strstr($key, '(', true)) ?: $key; // Remove filter directives
             $meta = static::meta()->ofProperty($prop);
-            
+
             if (isset($meta['dbSkip'])) {
                 unset($data[$key]);
             } elseif (isset($meta['dbFieldType'])) {
                 $value = Mongo\TypeCast::value($value)->to($meta['dbFieldType']);
             }
         }
-        
+
         return $data;
     }
-    
+
     /**
      * Get identifier property
-     * 
+     *
      * @return string
      */
     public static function getIdProperty()
     {
         foreach (static::meta()->ofProperties() as $prop => $meta) {
-            if (isset($meta['id'])) return $prop;
+            if (isset($meta['id'])) {
+                return $prop;
+            }
         }
-        
+
         return 'id';
     }
-    
+
     /**
      * Get the field map.
-     * 
+     *
      * @return array
      */
     protected static function getFieldMap()
     {
         $fieldMap = ['_id' => static::getIdProperty()];
-        
+
         foreach (static::meta()->ofProperties() as $prop => $meta) {
-            if (!isset($meta['dbFieldName']) || $meta['dbFieldName'] === $prop) continue;
-            $fieldMap[$meta['dbFieldName']] = $prop;
+            if (isset($meta['dbFieldName']) && $meta['dbFieldName'] !== $prop) {
+                $fieldMap[$meta['dbFieldName']] = $prop;
+            }
         }
-        
+
         return $fieldMap;
     }
-    
+
     /**
      * Get type cast object
-     * 
+     *
      * @return Mongo\TypeCast
      */
     protected function typeCast($value)
     {
         $typecast = Mongo\TypeCast::value($value);
-        
+
         $typecast->alias('self', get_class($this));
         $typecast->alias('static', get_class($this));
-        
+
         return $typecast;
     }
-    
+
     /**
      * Set the values.
-     * 
+     *
      * @param array|object $values
      * @return $this
      */
@@ -128,8 +143,8 @@ trait MetaImplementation
     {
         $this->_basic_setValues($values);
         $this->cast();
-        
+
         return $this;
     }
-    
+
 }
