@@ -5,14 +5,16 @@ namespace Jasny\DB\Mongo;
 use Jasny\DB\Mongo\Document\BasicImplementation,
     Jasny\DB\Entity\Identifiable,
     Jasny\DB\Dataset\Sorted,
-    Jasny\DB\Mongo\Dataset\Search\PoormansImplementation;
+    Jasny\DB\Mongo\Dataset\Search\PoormansImplementation,
+    Jasny\DB\Mongo\Document\MetaImplementation,
+    Jasny\Meta\TypeCasting;
 
 /**
- * Stub for lazy document instance
+ * Stub for document instance with meta and search
  */
-class TestDocumentBasic implements Identifiable, Sorted
+class TestDocumentMetaSearch implements Identifiable, Sorted, TypeCasting
 {
-    use BasicImplementation,
+    use MetaImplementation,
         PoormansImplementation;
 
     /**
@@ -42,6 +44,23 @@ class TestDocumentBasic implements Identifiable, Sorted
      * @var string
      **/
     public $id;
+
+    /**
+     * @searchField
+     * @var string
+     **/
+    public $foo;
+
+    /**
+     * @var string
+     **/
+    public $bar;
+
+    /**
+     * @searchField
+     * @var string
+     **/
+    public $zoo;
 
     /**
      * Get the database connection mock
@@ -79,6 +98,16 @@ class TestDocumentBasic implements Identifiable, Sorted
         }
 
         return static::$entitySetMock;
+    }
+
+    /**
+     * Cast properties
+     *
+     * @return $this
+     */
+    public function cast()
+    {
+
     }
 
     /**

@@ -10,6 +10,7 @@ require_once "tests/support/stubs/TestDocumentBasicEmptyFilter.php";
 require_once "tests/support/stubs/TestDocumentLazy.php";
 require_once "tests/support/stubs/TestDocumentSorted.php";
 require_once "tests/support/stubs/TestDocumentMeta.php";
+require_once "tests/support/stubs/TestDocumentMetaSearch.php";
 require_once "tests/support/stubs/TestDocumentMetaEmpty.php";
 require_once "tests/support/stubs/TestEntityMetaMongo.php";
 require_once "tests/support/stubs/TestEntityMeta.php";
