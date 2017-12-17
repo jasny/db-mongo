@@ -8,3 +8,6 @@ require_once "tests/support/stubs/TestDocumentLazy.php";
 require_once "tests/support/stubs/TestDocumentSorted.php";
 require_once "tests/support/stubs/TestEntityMetaMongo.php";
 require_once "tests/support/stubs/TestEntityMeta.php";
+require_once "tests/support/stubs/TestDataMapper.php";
+require_once "tests/support/stubs/TestEntityDataMapper.php";
+require_once "tests/support/stubs/TestEntityData.php";

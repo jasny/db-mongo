@@ -35,11 +35,16 @@ trait Implementation
      */
     protected static function getEntityClass()
     {
-        if (isset(static::$entityClass)) return static::$entityClass;
+        if (isset(static::$entityClass)) {
+            return static::$entityClass;
+        }
 
         if (substr(get_called_class(), -6) === 'Mapper') {
             $class = substr(get_called_class(), 0, -6);
-            if (is_a($class, Entity::class)) return $class;
+
+            if (is_a($class, Entity::class, true)) {
+                return $class;
+            }
         }
 
         throw new \Exception("Unable to determine entity class");
@@ -55,7 +60,9 @@ trait Implementation
     protected static function toData(Entity $document)
     {
         $values = $document->getValues();
-        if ($this instanceof FieldMapping) $values = static::mapToFields($values);
+        if (is_a(get_called_class(), FieldMapping::class, true)) {
+            $values = static::mapToFields($values);
+        }
 
         return $values;
     }
