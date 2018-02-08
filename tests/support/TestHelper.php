@@ -5,7 +5,7 @@ namespace Jasny\DB\Mongo;
 /**
  * Additional test methods
  */
-trait TestHelper
+abstract class TestHelper extends \PHPUnit_Framework_TestCase
 {
     /**
      * Set a private or protected property of the given object
@@ -17,7 +17,7 @@ trait TestHelper
     protected function setPrivateProperty($object, $property, $value)
     {
         if (!is_object($object)) {
-            throw new \InvalidArgumentException("Excpected an object, got a " . gettype($object));
+            throw new \InvalidArgumentException("Expected an object, got a " . gettype($object));
         }
 
         $refl = new \ReflectionProperty($object, $property);
