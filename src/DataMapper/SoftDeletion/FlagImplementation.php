@@ -7,7 +7,7 @@ use Jasny\DB\Mongo\DB;
 
 /**
  * Implementation of soft deletion using a flag (for documents).
- * 
+ *
  * @author  Arnold Daniels <arnold@jasny.net>
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
@@ -16,7 +16,7 @@ trait FlagImplementation
 {
     /**
      * Convert a Jasny DB styled filter to a MongoDB query.
-     * 
+     *
      * @param array $filter
      * @param array $opts
      * @return array
@@ -25,20 +25,20 @@ trait FlagImplementation
     {
         $filter = static::castForDB($filter);
         $filter = static::mapToFields($filter);
-        
+
         if (in_array('from-trash', $opts)) {
             $filter['_deleted'] = true;
         } elseif (!in_array('include-trash', $opts)) {
             $filter['_deleted'] = null;
         }
-        
+
         return DB::filterToQuery($filter);
     }
-    
-    
+
+
     /**
      * Check if document is flagged as deleted
-     * 
+     *
      * @param Entity $document
      * @return boolean
      */
@@ -46,40 +46,47 @@ trait FlagImplementation
     {
         $filter = static::idToFilter($document);
         $query = static::filterToQuery($filter, ['from-trash']);
-        
-        if (empty($query['_id'])) return false;
+
+        if (empty($query['_id'])) {
+            return false;
+        }
+
         return static::getCollection()->count($query) > 0;
     }
-    
+
     /**
      * Delete the document
-     * 
+     *
      * @param Entity $document
+     * @return boolean
      */
-    public static function delete(Entity $document)
+    public static function delete(Entity $document, array $opts = [])
     {
         $filter = static::idToFilter($document);
         $query = static::filterToQuery($filter);
-        
-        static::getCollection()->update($query, ['$set' => ['_deleted' => true]]);
+
+        return static::getCollection()->update($query, ['$set' => ['_deleted' => true]]);
     }
-    
+
     /**
      * Undelete the document
-     * 
+     *
      * @param Entity $document
+     * @return boolean
      */
     public static function undelete(Entity $document)
     {
         $filter = static::idToFilter($document);
         $query = static::filterToQuery($filter, ['from-trash']);
-        
-        static::getCollection()->update($query, ['$unset' => ['_deleted' => 1]]);
-        return $this;
+
+        return static::getCollection()->update($query, ['$unset' => ['_deleted' => 1]]);
     }
-    
+
     /**
      * Purge deleted document
+     *
+     * @param Entity $document
+     * @return boolean
      */
     public static function purge(Entity $document)
     {
@@ -89,15 +96,18 @@ trait FlagImplementation
 
         $filter = static::idToFilter($document);
         $query = static::filterToQuery($filter, ['from-trash']);
-        
-        static::getCollection()->remove($query);
+
+        return static::getCollection()->remove($query);
     }
-    
+
     /**
      * Purge all deleted documents
+     *
+     * @param array $opts
+     * @return boolean
      */
-    public static function purgeAll()
+    public static function purgeAll(array $opts = [])
     {
-        static::getCollection()->remove(['_deleted' => true]);
+        return static::getCollection()->remove(['_deleted' => true]);
     }
 }
