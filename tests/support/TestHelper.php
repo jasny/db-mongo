@@ -26,6 +26,26 @@ abstract class TestHelper extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Get private or protected property value
+     *
+     * @param object $object
+     * @param string $property
+     * @return mixed
+     */
+    protected function getPrivatePropery($object, $property)
+    {
+        if (!is_object($object)) {
+            throw new \InvalidArgumentException("Expected an object, got a " . gettype($object));
+        }
+
+        $refl = new \ReflectionObject($object);
+        $property = $refl->getProperty($property);
+        $property->setAccessible(true);
+
+        return $property->getValue($object);
+    }
+
+    /**
      * Call protected method on some object
      *
      * @param object $object
