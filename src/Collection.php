@@ -2,8 +2,10 @@
 
 namespace Jasny\DB\Mongo;
 
-use Jasny\DB\Mongo\Cursor;
-use Jasny\DB\Entity;
+use Jasny\DB\Mongo\Cursor,
+    Jasny\DB\Entity,
+    MongoDB\Driver\Manager,
+    MongoDB\Collection as MongoCollection;
 
 /**
  * Mongo collection which produces Document objects
@@ -12,7 +14,7 @@ use Jasny\DB\Entity;
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-class Collection extends \MongoCollection
+class Collection extends MongoCollection
 {
     /**
      * Entity class
@@ -21,18 +23,22 @@ class Collection extends \MongoCollection
     protected $documentClass;
 
     /**
-     * @param \MongoDB $db
-     * @param string   $name
-     * @param string   $documentClass
+     * @param \MongoDB\Driver\Manager  $manager
+     * @param string                   $dbName
+     * @param string                   $name
+     * @param array                    $options
      */
-    public function __construct(\MongoDB $db, $name, $documentClass = null)
+    public function __construct(Manager $manager, $dbName, $name, $options = [])
     {
+        $documentClass = isset($options['documentClass']) ? $options['documentClass'] : null;
+        unset($options['documentClass']);
+
         if (isset($documentClass) && !is_a($documentClass, Entity::class, true)) {
             throw new \LogicException("Class $documentClass is not a " . Entity::class);
         }
 
         $this->documentClass = $documentClass;
-        parent::__construct($db, $name);
+        parent::__construct($manager, $dbName, $name, $options);
     }
 
     /**

@@ -17,6 +17,7 @@ require_once "tests/support/stubs/TestDocumentMetaSearch.php";
 require_once "tests/support/stubs/TestDocumentMetaEmpty.php";
 require_once "tests/support/stubs/TestEntityMetaMongo.php";
 require_once "tests/support/stubs/TestEntityMeta.php";
+require_once "tests/support/stubs/TestDataMapperSoftDeletion.php";
 require_once "tests/support/stubs/TestDataMapper.php";
 require_once "tests/support/stubs/TestEntityDataMapper.php";
 require_once "tests/support/stubs/TestEntityData.php";

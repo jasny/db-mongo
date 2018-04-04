@@ -5,7 +5,10 @@ namespace Jasny\DB\Mongo;
 use Jasny\DB\Blob,
     Jasny\DB\Entity,
     Jasny\DB\Entity\Identifiable,
-    Jasny\DB\EntitySet;
+    Jasny\DB\EntitySet,
+    MongoDB\Client,
+    MongoDB\Driver\Manager,
+    MongoDB\BSON;
 
 /**
  * @covers Jasny\DB\Mongo\DB
@@ -13,19 +16,62 @@ use Jasny\DB\Blob,
 class DBTest extends TestHelper
 {
     /**
-     * Test 'getClient' method
+     * Provide data for testing 'createClientFromOptions' method
+     *
+     * @return array
      */
-    public function testGetClient()
+    public function createClientFromOptionsProvider()
     {
-        $client = $this->getMockBuilder(\MongoClient::class)
+        return [
+            [['client' => 'mongodb://test-host'], 'mongodb://test-host'],
+            [['client' => 'mongodb://test-host', 'database' => 'test-db'], 'mongodb://test-host/test-db'],
+            [(object)['client' => 'mongodb://test-host', 'database' => 'test-db'], 'mongodb://test-host/test-db'],
+            [(object)['client' => 'mongodb://test-host/test-db'], 'mongodb://test-host/test-db'],
+            [(object)['client' => 'mongodb://test-host/test-db', 'database' => 'another-db'], 'mongodb://test-host/test-db'],
+        ];
+    }
+
+    /**
+     * Test '__construct' method
+     *
+     * @dataProvider createClientFromOptionsProvider
+     */
+    public function testCreateClientFromOptions($options, $expectedUri)
+    {
+        $mock = $this->getMockBuilder(DB::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $db = $this->createPartialMock(DB::class, []);
 
-        $this->setPrivateProperty($db, 'mongoClient', $client);
+        $result = $this->callProtectedMethod($mock, 'createClientFromOptions', [$options]);
+        $this->assertInstanceOf(Client::class, $result);
 
-        $result = $db->getClient();
-        $this->assertEquals($client, $result);
+        $uri = $this->getPrivatePropery($result, 'uri');
+        $this->assertSame($expectedUri, $uri);
+    }
+
+    /**
+     * Test 'selectCollection' method
+     */
+    public function testSelectCollection()
+    {
+        $collectionName = 'test-collection';
+        $dbName = 'test-db';
+
+        $manager = new Manager('mongodb://test-host'); //Can not be mocked, as it's final
+        $db = $this->getMockBuilder(DB::class)
+            ->disableOriginalConstructor()
+            ->setMethods(['getManager', 'getDatabaseName'])
+            ->getMock();
+
+        $db->expects($this->once())->method('getManager')->willReturn($manager);
+        $db->expects($this->once())->method('getDatabaseName')->willReturn($dbName);
+
+        $result = $db->selectCollection($collectionName);
+
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertSame($dbName, $result->getDatabaseName());
+        $this->assertSame($collectionName, $result->getCollectionName());
+        $this->assertSame($manager, $result->getManager());
     }
 
     /**
@@ -57,17 +103,16 @@ class DBTest extends TestHelper
      */
     public function toMongoTypeProvider()
     {
+        //Mongo data types are final classes, so we can not mock them
         $values = [
-            $this->createMock(\MongoBinData::class),
-            $this->createMock(\MongoDate::class),
-            $this->createMock(\MongoDBRef::class),
-            $this->createMock(\MongoInt32::class),
-            $this->createMock(\MongoInt64::class),
-            $this->createMock(\MongoId::class),
-            $this->createMock(\MongoMaxKey::class),
-            $this->createMock(\MongoMinKey::class),
-            $this->createMock(\MongoRegex::class),
-            $this->createMock(\MongoTimestamp::class)
+            new BSON\Binary('data', BSON\Binary::TYPE_GENERIC),
+            new BSON\UTCDateTime(),
+            new BSON\Decimal128(1),
+            new BSON\ObjectId(),
+            new BSON\MaxKey(),
+            new BSON\MinKey(),
+            new BSON\Regex('foo'),
+            new BSON\Timestamp(1, 1)
         ];
 
         //Use closure as provided value, because data provider can not provide unclonable values (e.g. mongo types)
@@ -85,9 +130,7 @@ class DBTest extends TestHelper
             [$func($values[4])],
             [$func($values[5])],
             [$func($values[6])],
-            [$func($values[7])],
-            [$func($values[8])],
-            [$func($values[9])]
+            [$func($values[7])]
         ];
     }
 
@@ -109,12 +152,13 @@ class DBTest extends TestHelper
     public function testToMongoTypeDateTime()
     {
         $date = $this->createMock(\DateTime::class);
-        $date->expects($this->once())->method('getTimestamp')->willReturn(123);
+        $date->method('getTimestamp')->willReturn(123);
 
         $result = DB::toMongoType($date);
+        $this->assertInstanceOf(BSON\UTCDateTime::class, $result);
 
-        $this->assertInstanceOf(\MongoDate::class, $result);
-        $this->assertEquals(123, $result->sec);
+        $asDate = $result->toDateTime();
+        $this->assertEquals($date->getTimestamp(), $asDate->getTimestamp());
     }
 
     /**
@@ -127,8 +171,8 @@ class DBTest extends TestHelper
 
         $result = DB::toMongoType($blob);
 
-        $this->assertInstanceOf(\MongoBinData::class, $result);
-        $this->assertEquals('Some data', $result->bin);
+        $this->assertInstanceOf(BSON\Binary::class, $result);
+        $this->assertEquals('Some data', (string)$result);
     }
 
     /**
@@ -202,7 +246,7 @@ class DBTest extends TestHelper
     /**
      * Test 'toMongoType' method with object, that can not be cast
      *
-     * @expectedException MongoException
+     * @expectedException MongoDB\Exception\InvalidArgumentException
      */
     public function testToMongoTypeWrongClass()
     {
@@ -258,14 +302,12 @@ class DBTest extends TestHelper
     public function fromMongoTypeProvider()
     {
         $values = [
-            $this->createMock(\MongoDBRef::class),
-            $this->createMock(\MongoInt32::class),
-            $this->createMock(\MongoInt64::class),
-            $this->createMock(\MongoId::class),
-            $this->createMock(\MongoMaxKey::class),
-            $this->createMock(\MongoMinKey::class),
-            $this->createMock(\MongoRegex::class),
-            $this->createMock(\MongoTimestamp::class)
+            new BSON\Decimal128(1),
+            new BSON\ObjectId(),
+            new BSON\MaxKey(),
+            new BSON\MinKey(),
+            new BSON\Regex('foo'),
+            new BSON\Timestamp(1, 1)
         ];
 
         //Use closure as provided value, because data provider can not provide unclonable values (e.g. mongo types)
@@ -281,9 +323,7 @@ class DBTest extends TestHelper
             [$func($values[2])],
             [$func($values[3])],
             [$func($values[4])],
-            [$func($values[5])],
-            [$func($values[6])],
-            [$func($values[7])]
+            [$func($values[5])]
         ];
     }
 
@@ -300,13 +340,11 @@ class DBTest extends TestHelper
     }
 
     /**
-     * Test 'fromMongoType' method with \MongoDate argument
+     * Test 'fromMongoType' method with MongoDB\BSON\UTCDateTime argument
      */
     public function testFromMongoTypeDate()
     {
-        $value = $this->createMock(\MongoDate::class);
-        $this->setPrivateProperty($value, 'sec', 123);
-
+        $value = new BSON\UTCDateTime(123000);
         $result = DB::fromMongoType($value);
 
         $this->assertInstanceOf(\DateTime::class, $result);
@@ -314,13 +352,11 @@ class DBTest extends TestHelper
     }
 
     /**
-     * Test 'fromMongoType' method with \MongoBinData argument
+     * Test 'fromMongoType' method with MongoDB\BSON\Binary argument
      */
     public function testFromMongoTypeBlob()
     {
-        $value = $this->createMock(\MongoBinData::class);
-        $this->setPrivateProperty($value, 'bin', 'Some data');
-
+        $value = new BSON\Binary('Some data', BSON\Binary::TYPE_GENERIC);
         $result = DB::fromMongoType($value);
 
         $this->assertInstanceOf(Blob::class, $result);
