@@ -4,11 +4,13 @@ namespace Jasny\DB\Mongo;
 
 use Jasny\DB\Mongo\DB,
     Jasny\DB\Mongo\TestEntity,
+    Jasny\DB\Mongo\TypeCast\DeepCast,
     Jasny\DB\BasicEntity,
     Jasny\DB\Entity,
     Jasny\DB\Entity\Identifiable,
     Jasny\DB\Entity\LazyLoading,
-    Jasny\DB\EntitySet;
+    Jasny\DB\EntitySet,
+    MongoDB\Driver\Manager;
 
 /**
  * @covers Jasny\DB\Mongo\Collection
@@ -22,29 +24,8 @@ class CollectionTest extends TestHelper
      */
     public function testConstructorExceptionEntity()
     {
-        $db = $this->createMock(\MongoDB::class);
-        $collection = new Collection($db, 'foo_name', \stdClass::class);
-    }
-
-    /**
-     * Test 'createIndexes' method
-     */
-    public function testCreateIndexes()
-    {
-        $indexes = [
-            ['foo' => 'bar', '$options' => ['delete' => true]],
-            ['free' => 'see'],
-            ['zoo' => 'baz', '$options' => ['some' => 'pam']]
-        ];
-
-        $collection = $this->createPartialMock(collection::class, ['deleteIndex', 'createIndex']);
-        $collection->expects($this->once())->method('deleteIndex')->with(['foo' => 'bar']);
-        $collection->expects($this->exactly(2))->method('createIndex')->withConsecutive(
-            [['free' => 'see']],
-            [['zoo' => 'baz'], ['some' => 'pam']]
-        );
-
-        $collection->createIndexes($indexes);
+        $manager = new Manager('mongodb://test-host');
+        $collection = new Collection($manager, 'test-db', 'test-collection', ['documentClass' => \stdClass::class]);
     }
 
     /**
@@ -52,16 +33,12 @@ class CollectionTest extends TestHelper
      */
     public function testCreateIndex()
     {
-        $keys = ['foo' => 'bar'];
+        $keys = ['foo' => 1];
         $options = ['zoo' => 'baz'];
-        $expected = ['keys' => $keys, 'options' => $options];
+        $expected = 'foo_result';
 
-        $callback = function($keys, $options) use ($expected) {
-            return $expected; // Test that correct parameters are passed
-        };
-
-        $collection = $this->createPartialMock(Collection::class, ['getCreateIndexMethod']);
-        $collection->expects($this->once())->method('getCreateIndexMethod')->willReturn($callback);
+        $collection = $this->createPartialMock(Collection::class, ['parent']);
+        $collection->expects($this->once())->method('parent', $keys, $options)->willReturn($expected);
 
         $result = $collection->createIndex($keys, $options);
 
@@ -76,8 +53,8 @@ class CollectionTest extends TestHelper
     public function createIndexExceptionProvider()
     {
         return [
-            [new \MongoCursorException('', 1), ['ignore' => true, 'force' => true]], //Not 85 exception code
-            [new \MongoCursorException('', 85), []]
+            [new \MongoDB\Driver\Exception\RuntimeException('', 1), ['ignore' => true, 'force' => true]], //Not 85 (index exists) exception code
+            [new \MongoDB\Driver\Exception\RuntimeException('', 85), []]
         ];
     }
 
@@ -85,20 +62,18 @@ class CollectionTest extends TestHelper
      * Test 'createIndex' method with throwing exception
      *
      * @dataProvider createIndexExceptionProvider
-     * @param MongoCursorException $exception
+     * @param \MongoDB\Driver\Exception\RuntimeException $exception
      * @param array $options
      */
     public function testCreateIndexException($exception, $options)
     {
-        $callback = function($keys, $options) use ($exception) {
-            throw $exception;
-        };
+        $keys = ['foo' => 'bar'];
 
-        $collection = $this->createPartialMock(Collection::class, ['getCreateIndexMethod']);
-        $collection->expects($this->once())->method('getCreateIndexMethod')->willReturn($callback);
+        $collection = $this->createPartialMock(Collection::class, ['parent']);
+        $collection->expects($this->once())->method('parent', $keys, $options)->willThrowException($exception);
 
-        $this->expectException(\MongoCursorException::class);
-        $collection->createIndex(['foo' => 'bar'], $options);
+        $this->expectException(\MongoDB\Driver\Exception\RuntimeException::class);
+        $collection->createIndex($keys, $options);
     }
 
     /**
@@ -106,28 +81,23 @@ class CollectionTest extends TestHelper
      */
     public function testCreateIndexForce()
     {
-        $keys = ['foo' => 'bar'];
+        $keys = ['foo' => 1];
         $options = ['force' => true];
         $callbackState = (object)['called' => 0];
 
-        $callback = function($keysArg, $optionsArg) use ($callbackState, $keys, $options) {
-            $this->assertEquals($keys, $keysArg);
-            $this->assertEquals($options, $optionsArg);
-
+        $callback = function($keysArg, $optionsArg) use ($callbackState) {
             if ($callbackState->called) {
                 $callbackState->called++;
                 return true;
             }
 
             $callbackState->called++;
-            throw new \MongoCursorException('', 85);
+            throw new \MongoDB\Driver\Exception\RuntimeException('', 85);
         };
 
-        $callback = $callback->bindTo($this);
-
-        $collection = $this->createPartialMock(Collection::class, ['getCreateIndexMethod', 'deleteIndex']);
-        $collection->expects($this->once())->method('getCreateIndexMethod')->willReturn($callback);
-        $collection->expects($this->once())->method('deleteIndex')->with($keys);
+        $collection = $this->createPartialMock(Collection::class, ['parent', 'dropIndex']);
+        $collection->expects($this->exactly(2))->method('parent', $keys, $options)->will($this->returnCallback($callback));
+        $collection->expects($this->once())->method('dropIndex')->with('foo');
 
         $result = $collection->createIndex($keys, $options);
         $this->assertEquals(true, $result);
@@ -139,27 +109,19 @@ class CollectionTest extends TestHelper
      */
     public function testCreateIndexIgnore()
     {
-        $keys = ['foo' => 'bar'];
+        $keys = ['foo' => 1];
         $options = ['ignore' => true];
-        $callbackState = (object)['called' => 0];
 
-        $callback = function($keysArg, $optionsArg) use ($callbackState, $keys, $options) {
-            $this->assertEquals($keys, $keysArg);
-            $this->assertEquals($options, $optionsArg);
-
-            $callbackState->called++;
-            throw new \MongoCursorException('', 85);
+        $callback = function($keysArg, $optionsArg) {
+            throw new \MongoDB\Driver\Exception\RuntimeException('', 85);
         };
 
-        $callback = $callback->bindTo($this);
-
-        $collection = $this->createPartialMock(Collection::class, ['getCreateIndexMethod', 'deleteIndex']);
-        $collection->expects($this->once())->method('getCreateIndexMethod')->willReturn($callback);
-        $collection->expects($this->never())->method('deleteIndex');
+        $collection = $this->createPartialMock(Collection::class, ['parent', 'dropIndex']);
+        $collection->expects($this->once())->method('parent', $keys, $options)->will($this->returnCallback($callback));
+        $collection->expects($this->never())->method('dropIndex');
 
         $result = $collection->createIndex($keys, $options);
         $this->assertEquals(false, $result);
-        $this->assertEquals(1, $callbackState->called);
     }
 
     /**
@@ -173,6 +135,220 @@ class CollectionTest extends TestHelper
         $result = $collection->getDocumentClass();
 
         $this->assertEquals('foo', $result);
+    }
+
+    /**
+     * Test 'withoutCasting' method
+     */
+    public function testWithoutCasting()
+    {
+        $manager = new Manager('mongodb://test-host');
+
+        $collection = $this->createPartialMock(Collection::class, ['getManager', 'getDatabaseName', 'getCollectionName']);
+        $collection->expects($this->once())->method('getManager')->willReturn($manager);
+        $collection->expects($this->once())->method('getDatabaseName')->willReturn('test-db');
+        $collection->expects($this->once())->method('getCollectionName')->willReturn('test-collection');
+        $this->setPrivateProperty($collection, 'documentClass', 'SomeClass');
+
+        $result = $collection->withoutCasting();
+
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertSame($manager, $result->getManager());
+        $this->assertSame('test-db', $result->getDatabaseName());
+        $this->assertSame('test-collection', $result->getCollectionName());
+        $this->assertSame(null, $result->getDocumentClass());
+    }
+
+    /**
+     * Provide data for testing 'insertOne' method
+     *
+     * @return array
+     */
+    public function insertOneProvider()
+    {
+        return [
+            [['foo' => 'bar'], ['foo' => 'bar', '_id' => 'foo_id']],
+            [(object)['foo' => 'bar'], (object)['foo' => 'bar', '_id' => 'foo_id']],
+        ];
+    }
+
+    /**
+     * Test 'insertOne' method
+     *
+     * @dataProvider insertOneProvider
+     */
+    public function testInsertOne($document, $expectedDocument)
+    {
+        $id = 'foo_id';
+        $options = ['opt1' => 'val1'];
+        $values = (array)$document;
+        $queryResult = $this->createMock(\MongoDB\InsertOneResult::class);
+
+        $typeCast = $this->createMock(DeepCast::class);
+
+        $collection = $this->createPartialMock(Collection::class, ['getTypeCaster', 'parent']);
+        $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
+        $typeCast->expects($this->once())->method('toMongoType')->with($document, true)->willReturn($values);
+        $collection->expects($this->once())->method('parent')->with('insertOne', $values, $options)->willReturn($queryResult);
+        $queryResult->expects($this->once())->method('getInsertedId')->willReturn($id);
+
+        $result = $collection->insertOne($document, $options);
+        $this->assertSame($queryResult, $result);
+        $this->assertEquals($expectedDocument, $document);
+    }
+
+    /**
+     * Test 'insertMany' method
+     */
+    public function testInsertMany()
+    {
+        $options = ['opt1' => 'val1'];
+        $docs = [
+            ['foo' => 'bar'],
+            ['foo2' => 'bar2'],
+            (object)['foo3' => 'bar3']
+        ];
+
+        $data = [
+            ['foo' => 'bar'],
+            ['foo2' => 'bar2'],
+            ['foo3' => 'bar3']
+        ];
+
+        $expectedDocs = [
+            ['foo' => 'bar', '_id' => 'a'],
+            ['foo2' => 'bar2', '_id' => 'b'],
+            (object)['foo3' => 'bar3', '_id' => 'c']
+        ];
+
+        $queryResult = $this->createMock(\MongoDB\InsertManyResult::class);
+
+        $typeCast = $this->createMock(DeepCast::class);
+        $typeCast->expects($this->exactly(3))->method('toMongoType')->will($this->returnValueMap([
+            [$docs[0], true, $docs[0]],
+            [$docs[1], true, $docs[1]],
+            [$docs[2], true, (array)$docs[2]]
+        ]));
+
+        $collection = $this->createPartialMock(Collection::class, ['getTypeCaster', 'parent']);
+        $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
+        $collection->expects($this->once())->method('parent')->with('insertMany', $data, $options)->willReturn($queryResult);
+        $queryResult->expects($this->once())->method('getInsertedIds')->willReturn(['a', 'b', 'c']);
+
+        $result = $collection->insertMany($docs, $options);
+        $this->assertSame($queryResult, $result);
+        $this->assertEquals($expectedDocs, $docs);
+    }
+
+    /**
+     * Test 'replaceOne' method
+     *
+     * @dataProvider insertOneProvider
+     */
+    public function testReplaceOne($document, $expectedDocument)
+    {
+        $id = 'foo_id';
+        $options = ['opt1' => 'val1'];
+        $filter = ['match_key' => 'val'];
+        $values = (array)$document;
+        $queryResult = $this->createMock(\MongoDB\UpdateResult::class);
+
+        $typeCast = $this->createMock(DeepCast::class);
+
+        $collection = $this->createPartialMock(Collection::class, ['getTypeCaster', 'parent']);
+        $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
+        $typeCast->expects($this->once())->method('toMongoType')->with($document, true)->willReturn($values);
+        $collection->expects($this->once())->method('parent')->with('replaceOne', $filter, $values, $options)->willReturn($queryResult);
+        $queryResult->expects($this->once())->method('getUpsertedId')->willReturn($id);
+
+        $result = $collection->replaceOne($filter, $document, $options);
+        $this->assertSame($queryResult, $result);
+        $this->assertEquals($expectedDocument, $document);
+    }
+
+    /**
+     * Test 'replaceOne' method, if no record was replaced
+     */
+    public function testReplaceOneNoReplaced()
+    {
+        $id = 'foo_id';
+        $document = ['foo' => 'bar'];
+        $options = ['opt1' => 'val1'];
+        $filter = ['match_key' => 'val'];
+        $values = (array)$document;
+        $queryResult = $this->createMock(\MongoDB\UpdateResult::class);
+
+        $typeCast = $this->createMock(DeepCast::class);
+
+        $collection = $this->createPartialMock(Collection::class, ['getTypeCaster', 'parent']);
+        $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
+        $typeCast->expects($this->once())->method('toMongoType')->with($document, true)->willReturn($values);
+        $collection->expects($this->once())->method('parent')->with('replaceOne', $filter, $values, $options)->willReturn($queryResult);
+        $queryResult->expects($this->once())->method('getUpsertedId')->willReturn(null);
+
+        $result = $collection->replaceOne($filter, $document, $options);
+        $this->assertSame($queryResult, $result);
+        $this->assertEquals(['foo' => 'bar'], $document);
+    }
+
+    /**
+     * Provide data for testing 'save' method, when 'replaceOne' method is called
+     *
+     * @return array
+     */
+    public function saveReplaceProvider()
+    {
+        return [
+            [['key1' => 'val1'], ['key1' => 'val1', 'upsert' => true]],
+            [['key1' => 'val1', 'upsert' => true], ['key1' => 'val1', 'upsert' => true]],
+            [['key1' => 'val1', 'upsert' => false], ['key1' => 'val1', 'upsert' => false]]
+        ];
+    }
+
+    /**
+     * Test 'save' method, when 'replaceOne' method is called
+     *
+     * @dataProvider saveReplaceProvider
+     */
+    public function testSaveReplace($options, $useOptions)
+    {
+        $document = (object)['foo' => 'bar', '_id' => 'baz'];
+        $filter = ['_id' => 'baz'];
+        $expected = 'foo_result';
+        $values = $document;
+
+        $typeCast = $this->createMock(DeepCast::class);
+
+        $collection = $this->createPartialMock(Collection::class, ['getTypeCaster', 'replaceOne', 'insertOne']);
+        $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
+        $typeCast->expects($this->once())->method('toMongoType')->with($document, true)->willReturn($values);
+        $collection->expects($this->once())->method('replaceOne')->with($filter, $document, $useOptions)->willReturn($expected);
+        $collection->expects($this->never())->method('insertOne');
+
+        $result = $collection->save($document, $options);
+        $this->assertSame($expected, $result);
+    }
+
+    /**
+     * Test 'save' method, when 'insertOne' method is called
+     */
+    public function testSaveInsert()
+    {
+        $document = (object)['foo' => 'bar'];
+        $options = ['opt1' => 'val1'];
+        $expected = 'foo_result';
+        $values = $document;
+
+        $typeCast = $this->createMock(DeepCast::class);
+
+        $collection = $this->createPartialMock(Collection::class, ['getTypeCaster', 'replaceOne', 'insertOne']);
+        $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
+        $typeCast->expects($this->once())->method('toMongoType')->with($document, true)->willReturn($values);
+        $collection->expects($this->once())->method('insertOne')->with($document, $options)->willReturn($expected);
+        $collection->expects($this->never())->method('replaceOne');
+
+        $result = $collection->save($document, $options);
+        $this->assertSame($expected, $result);
     }
 
     /**
@@ -195,16 +371,18 @@ class CollectionTest extends TestHelper
      */
     public function testAsDocument($class, $lazy)
     {
-        $date = $this->createMock(\MongoDate::class);
-        $this->setPrivateProperty($date, 'sec', 123);
-
+        $date = new \MongoDB\BSON\UTCDateTime(123000);
         $values = ['date' => $date, 'zoo' => 'boo'];
 
-        $collection = $this->createPartialMock(Collection::class, []);
-        $this->setPrivateProperty($collection, 'documentClass', $class);
+        $typeCast = $this->createMock(DeepCast::class);
 
-        $db = $this->createPartialMock(DB::class, []);
-        $collection->db = $db;
+        $collection = $this->createPartialMock(Collection::class, ['getTypeCaster']);
+        $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
+        $typeCast->expects($this->exactly(2))->method('fromMongoType')->will($this->returnValueMap([
+            [$values['date'], $date->toDateTime()],
+            [$values['zoo'], $values['zoo']],
+        ]));
+        $this->setPrivateProperty($collection, 'documentClass', $class);
 
         $result = $collection->asDocument($values, $lazy);
 
@@ -222,16 +400,11 @@ class CollectionTest extends TestHelper
      */
     public function testAsDocumentLazyException()
     {
-        $date = $this->createMock(\MongoDate::class);
-        $this->setPrivateProperty($date, 'sec', 123);
-
+        $date = new \MongoDB\BSON\UTCDateTime(123000);
         $values = ['date' => $date, 'zoo' => 'boo'];
 
         $collection = $this->createPartialMock(Collection::class, []);
         $this->setPrivateProperty($collection, 'documentClass', TestEntity::class);
-
-        $db = $this->createPartialMock(DB::class, []);
-        $collection->db = $db;
 
         $result = $collection->asDocument($values, true);
     }
@@ -262,5 +435,105 @@ class CollectionTest extends TestHelper
         $collection->asDocument(['foo' => 'bar']);
     }
 
+    /**
+     * Provide data for testing 'find' method
+     *
+     * @return array
+     */
+    public function findProvider()
+    {
+        return [
+            [[], false],
+            [['foo' => 'bar'], false],
+            [['projection' => []], false],
+            [['projection' => ['field' => 1]], true]
+        ];
+    }
 
+    /**
+     * Test 'find' method
+     *
+     * @dataProvider findProvider
+     */
+    public function testFind($options, $expectedLazy)
+    {
+        $filter = [];
+        $cursor = 'driver_cursor';
+        $expected = 'result_cursor';
+
+        $collection = $this->createPartialMock(Collection::class, ['parent', 'createCursor']);
+        $collection->expects($this->once())->method('parent')->with('find', $filter, $options)->willReturn($cursor);
+        $collection->expects($this->once())->method('createCursor')->with($cursor, $expectedLazy)->willReturn($expected);
+
+        $result = $collection->find($filter, $options);
+        $this->assertSame($expected, $result);
+    }
+
+    /**
+     * Provide data for testing 'findOne' method
+     *
+     * @return array
+     */
+    public function findOneProvider()
+    {
+        return [
+            [[], false],
+            [['foo' => 'bar'], false],
+            [['projection' => []], false],
+            [['projection' => ['field' => 1]], true]
+        ];
+    }
+
+    /**
+     * Test 'findOne' method
+     *
+     * @dataProvider findOneProvider
+     */
+    public function testFindOne($options, $expectedLazy)
+    {
+        $filter = [];
+        $values = [];
+        $valuesAsDocument = ['foo'];
+        $documentClass = 'FooClass';
+
+        $collection = $this->createPartialMock(Collection::class, ['parent', 'asDocument']);
+        $collection->expects($this->once())->method('parent')->with('findOne', $filter, $options)->willReturn($values);
+        $collection->expects($this->once())->method('asDocument')->with($values, $expectedLazy)->willReturn($valuesAsDocument);
+        $this->setPrivateProperty($collection, 'documentClass', $documentClass);
+
+        $result = $collection->findOne($filter, $options);
+        $this->assertSame($valuesAsDocument, $result);
+    }
+
+    /**
+     * Provide data for testing 'findOne' method, when no cast is performed
+     *
+     * @return array
+     */
+    public function findOneNoCastProvider()
+    {
+        return [
+            [null, 'FooClass'],
+            [['foo'], null],
+        ];
+    }
+
+    /**
+     * Test 'findOne' method, when no casting is performed
+     *
+     * @dataProvider findOneNoCastProvider
+     */
+    public function testFindOneNoCast($values, $documentClass)
+    {
+        $filter = [];
+        $options = [];
+
+        $collection = $this->createPartialMock(Collection::class, ['parent', 'asDocument']);
+        $collection->expects($this->once())->method('parent')->with('findOne', $filter, $options)->willReturn($values);
+        $collection->expects($this->never())->method('asDocument');
+        $this->setPrivateProperty($collection, 'documentClass', $documentClass);
+
+        $result = $collection->findOne($filter, $options);
+        $this->assertSame($values, $result);
+    }
 }
