@@ -15,7 +15,7 @@ class Cursor implements \IteratorAggregate
      * Php mongo driver cursor
      * @var MongoDB\Driver\Cursor
      */
-    protected $cursor;
+    protected $source;
 
     /**
      * Record class
@@ -33,13 +33,13 @@ class Cursor implements \IteratorAggregate
      * Class constructor
      *
      * @codeCoverageIgnore
-     * @param \MongoDB\Driver\Cursor  $cursor
+     * @param \MongoDB\Driver\Cursor  $source
      * @param Collection              $collection
      * @param boolean                 $lazy
      */
-    public function __construct(\MongoDB\Driver\Cursor $cursor, Collection $collection, $lazy)
+    public function __construct(\MongoDB\Driver\Cursor $source, Collection $collection, $lazy)
     {
-        $this->cursor = $cursor;
+        $this->source = $source;
         $this->collection = $collection;
         $this->lazy = !!$lazy;
     }
@@ -56,7 +56,7 @@ class Cursor implements \IteratorAggregate
 
     /**
      * Get iterator, that can cast fetched records to collection class
-     * @return generator
+     * @return Iterator
      */
     public function getIterator()
     {
@@ -64,9 +64,11 @@ class Cursor implements \IteratorAggregate
         $self = $this;
 
         $generator = function () use ($documentClass, $self) {
-            foreach ($self->cursor as $key => $values) {
-                if ($values && $documentClass) {
-                    $values = $self->collection->asDocument($values, $this->lazy);
+            $source = $self->source ?: [];
+
+            foreach ($source as $key => $values) {
+                if (isset($values) && $documentClass) {
+                    $values = $self->collection->asDocument($values, $self->lazy);
                 }
 
                 yield $key => $values;
@@ -85,8 +87,8 @@ class Cursor implements \IteratorAggregate
      */
     public function __call($method, $args)
     {
-        if (method_exists($this->cursor, $method)) {
-            return call_user_func_array([$this->cursor, $method], $args);
+        if (method_exists($this->source, $method)) {
+            return call_user_func_array([$this->source, $method], $args);
         }
 
         throw new \BadMethodCallException("Method '$method' does not exists");
