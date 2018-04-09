@@ -5,7 +5,8 @@ namespace Jasny\DB\Mongo;
 use Jasny\DB\Blob,
     Jasny\DB\Entity,
     Jasny\DB\Entity\Identifiable,
-    Jasny\DB\EntitySet;
+    Jasny\DB\EntitySet,
+    MongoDB\BSON;
 
 /**
  * @covers Jasny\DB\Mongo\TypeCast
@@ -33,10 +34,10 @@ class TypeCastTest extends TestHelper
     public function mongoIdProvider()
     {
         return [
-            [\MongoId::class],
-            ['\\MongoId'],
-            ['MongoId'],
-            ['mongoid']
+            [BSON\ObjectId::class],
+            ['\\MongoDB\\BSON\\ObjectId'],
+            ['MongoDB\\BSON\\ObjectId'],
+            ['mongodb\\bson\\objectid']
         ];
     }
 
@@ -52,7 +53,7 @@ class TypeCastTest extends TestHelper
         $entity->expects($this->once())->method('getId')->willReturn('a');
 
         $typeCastClone = $this->createMock(TypeCast::class);
-        $typeCastClone->expects($this->once())->method('to')->with(\MongoId::class)->willReturn('foo_result');
+        $typeCastClone->expects($this->once())->method('to')->with(BSON\ObjectId::class)->willReturn('foo_result');
 
         $typeCast = $this->createPartialMock(TypeCast::class, ['forValue']);
         $typeCast->expects($this->once())->method('forValue')->with('a')->willReturn($typeCastClone);
@@ -77,7 +78,7 @@ class TypeCastTest extends TestHelper
 
         $result = $typeCast->toClass($mongoIdClass);
 
-        $this->assertInstanceOf(\MongoId::class, $result);
+        $this->assertInstanceOf(BSON\ObjectId::class, $result);
         $this->assertEquals($id, (string)$result);
     }
 
@@ -92,7 +93,7 @@ class TypeCastTest extends TestHelper
         $typeCast = $this->createPartialMock(TypeCast::class, ['dontCastTo']);
         $this->setPrivateProperty($typeCast, 'value', 'foo');
 
-        $typeCast->expects($this->once())->method('dontCastTo')->with(\MongoId::class)->willReturn('foo');
+        $typeCast->expects($this->once())->method('dontCastTo')->with(BSON\ObjectId::class)->willReturn('foo');
 
         $result = $typeCast->toClass($mongoIdClass);
     }
@@ -102,12 +103,12 @@ class TypeCastTest extends TestHelper
      */
     public function testMongoIdNoCast()
     {
-        $id = $this->createPartialMock(\MongoId::class, []);
+        $id = new BSON\ObjectId();
 
         $typeCast = $this->createPartialMock(TypeCast::class, []);
         $this->setPrivateProperty($typeCast, 'value', $id);
 
-        $result = $typeCast->toClass(\MongoId::class);
+        $result = $typeCast->toClass(BSON\ObjectId::class);
 
         $this->assertEquals($id, $result);
     }
