@@ -5,7 +5,10 @@ namespace Jasny\DB\Mongo;
 use Jasny\DB\Blob,
     Jasny\DB\Entity,
     Jasny\DB\Entity\Identifiable,
-    Jasny\DB\EntitySet;
+    Jasny\DB\EntitySet,
+    MongoDB\Client,
+    MongoDB\Driver\Manager,
+    MongoDB\BSON;
 
 /**
  * @covers Jasny\DB\Mongo\DB
@@ -13,19 +16,62 @@ use Jasny\DB\Blob,
 class DBTest extends TestHelper
 {
     /**
-     * Test 'getClient' method
+     * Provide data for testing 'createClientFromOptions' method
+     *
+     * @return array
      */
-    public function testGetClient()
+    public function createClientFromOptionsProvider()
     {
-        $client = $this->getMockBuilder(\MongoClient::class)
+        return [
+            [['client' => 'mongodb://test-host'], 'mongodb://test-host'],
+            [['client' => 'mongodb://test-host', 'database' => 'test-db'], 'mongodb://test-host/test-db'],
+            [(object)['client' => 'mongodb://test-host', 'database' => 'test-db'], 'mongodb://test-host/test-db'],
+            [(object)['client' => 'mongodb://test-host/test-db'], 'mongodb://test-host/test-db'],
+            [(object)['client' => 'mongodb://test-host/test-db', 'database' => 'another-db'], 'mongodb://test-host/test-db'],
+        ];
+    }
+
+    /**
+     * Test '__construct' method
+     *
+     * @dataProvider createClientFromOptionsProvider
+     */
+    public function testCreateClientFromOptions($options, $expectedUri)
+    {
+        $mock = $this->getMockBuilder(DB::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $db = $this->createPartialMock(DB::class, []);
 
-        $this->setPrivateProperty($db, 'mongoClient', $client);
+        $result = $this->callProtectedMethod($mock, 'createClientFromOptions', [$options]);
+        $this->assertInstanceOf(Client::class, $result);
 
-        $result = $db->getClient();
-        $this->assertEquals($client, $result);
+        $uri = $this->getPrivatePropery($result, 'uri');
+        $this->assertSame($expectedUri, $uri);
+    }
+
+    /**
+     * Test 'selectCollection' method
+     */
+    public function testSelectCollection()
+    {
+        $collectionName = 'test-collection';
+        $dbName = 'test-db';
+
+        $manager = new Manager('mongodb://test-host'); //Can not be mocked, as it's final
+        $db = $this->getMockBuilder(DB::class)
+            ->disableOriginalConstructor()
+            ->setMethods(['getManager', 'getDatabaseName'])
+            ->getMock();
+
+        $db->expects($this->once())->method('getManager')->willReturn($manager);
+        $db->expects($this->once())->method('getDatabaseName')->willReturn($dbName);
+
+        $result = $db->selectCollection($collectionName);
+
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertSame($dbName, $result->getDatabaseName());
+        $this->assertSame($collectionName, $result->getCollectionName());
+        $this->assertSame($manager, $result->getManager());
     }
 
     /**
@@ -48,315 +94,6 @@ class DBTest extends TestHelper
         $result = $db->$name;
 
         $this->assertEquals($collection, $result);
-    }
-
-    /**
-     * Provide data for testing 'toMongoType' method
-     *
-     * @return array
-     */
-    public function toMongoTypeProvider()
-    {
-        $values = [
-            $this->createMock(\MongoBinData::class),
-            $this->createMock(\MongoDate::class),
-            $this->createMock(\MongoDBRef::class),
-            $this->createMock(\MongoInt32::class),
-            $this->createMock(\MongoInt64::class),
-            $this->createMock(\MongoId::class),
-            $this->createMock(\MongoMaxKey::class),
-            $this->createMock(\MongoMinKey::class),
-            $this->createMock(\MongoRegex::class),
-            $this->createMock(\MongoTimestamp::class)
-        ];
-
-        //Use closure as provided value, because data provider can not provide unclonable values (e.g. mongo types)
-        $func = function($value) {
-            return function() use ($value) {
-                return $value;
-            };
-        };
-
-        return [
-            [$func($values[0])],
-            [$func($values[1])],
-            [$func($values[2])],
-            [$func($values[3])],
-            [$func($values[4])],
-            [$func($values[5])],
-            [$func($values[6])],
-            [$func($values[7])],
-            [$func($values[8])],
-            [$func($values[9])]
-        ];
-    }
-
-    /**
-     * Test 'toMongoType' method with arguments of mongo classes
-     *
-     * @dataProvider toMongoTypeProvider
-     * @param Closure $value
-     */
-    public function testToMongoType($value)
-    {
-        $result = DB::toMongoType($value());
-        $this->assertEquals($value(), $result);
-    }
-
-    /**
-     * Test 'toMongoType' method with DateTime argument
-     */
-    public function testToMongoTypeDateTime()
-    {
-        $date = $this->createMock(\DateTime::class);
-        $date->expects($this->once())->method('getTimestamp')->willReturn(123);
-
-        $result = DB::toMongoType($date);
-
-        $this->assertInstanceOf(\MongoDate::class, $result);
-        $this->assertEquals(123, $result->sec);
-    }
-
-    /**
-     * Test 'toMongoType' method with Blob argument
-     */
-    public function testToMongoTypeBlob()
-    {
-        $blob = $this->createPartialMock(Blob::class, []);
-        $this->setPrivateProperty($blob, 'data', 'Some data');
-
-        $result = DB::toMongoType($blob);
-
-        $this->assertInstanceOf(\MongoBinData::class, $result);
-        $this->assertEquals('Some data', $result->bin);
-    }
-
-    /**
-     * Test 'toMongoType' method with Identifiable argument
-     */
-    public function testToMongoTypeIdentifiable()
-    {
-        $entity = $this->createMock(Identifiable::class);
-        $entity->expects($this->once())->method('toData')->willReturn(['_id' => 'foo']);
-
-        $result = DB::toMongoType($entity);
-        $this->assertEquals('foo', $result);
-    }
-
-    /**
-     * Test 'toMongoType' method with Identifiable argument, if '$entity->toData()' does not hold an id
-     */
-    public function testToMongoTypeIdentifiableGetId()
-    {
-        $entity = $this->createMock(Identifiable::class);
-        $entity->expects($this->once())->method('toData')->willReturn(['bar' => 'foo']);
-        $entity->expects($this->once())->method('getId')->willReturn('alpha');
-
-        $result = DB::toMongoType($entity);
-        $this->assertEquals('alpha', $result);
-    }
-
-    /**
-     * Provide data for testing 'toMongoType' method with argument, that results in array (or stdClass) of values
-     *
-     * @return array
-     */
-    public function toMongoTypeArrayProvider()
-    {
-        $data = ['$foo1' => 'bar1', '$foo1.foo2\\.foo3' => 'bar2'];
-        $escaped = ['\\u0024foo1' => 'bar1', '\\u0024foo1\\u002efoo2\\\\\\u002efoo3' => 'bar2'];
-
-        return [
-            [Entity::class, 'toData', $data, false, $data],
-            [Entity::class, 'toData', $data, true, $escaped],
-            [Entity::class, 'toData', (object)$data, false, (object)$data],
-            [Entity::class, 'toData', (object)$data, true, (object)$escaped],
-            [EntitySet::class, 'getArrayCopy', $data, false, $data],
-            [EntitySet::class, 'getArrayCopy', $data, true, $escaped],
-            [EntitySet::class, 'getArrayCopy', (object)$data, false, (object)$data],
-            [EntitySet::class, 'getArrayCopy', (object)$data, true, (object)$escaped],
-            [\ArrayObject::class, 'getArrayCopy', $data, false, $data],
-            [\ArrayObject::class, 'getArrayCopy', $data, true, $escaped],
-            [\ArrayObject::class, 'getArrayCopy', (object)$data, false, (object)$data],
-            [\ArrayObject::class, 'getArrayCopy', (object)$data, true, (object)$escaped]
-        ];
-    }
-
-    /**
-     * Test 'toMongoType' method with argument, that results in array (or stdClass) of values
-     *
-     * @dataProvider toMongoTypeArrayProvider
-     * @param array|stdClass $data
-     * @param boolean $escapeKeys
-     * @param array|stdClass $expected
-     */
-    public function testToMongoTypeArray($class, $method, $data, $escapeKeys, $expected)
-    {
-        $value = $this->createMock($class);
-        $value->expects($this->once())->method($method)->willReturn($data);
-
-        $result = DB::toMongoType($value, $escapeKeys);
-        $this->assertEquals($expected, $result);
-    }
-
-    /**
-     * Test 'toMongoType' method with object, that can not be cast
-     *
-     * @expectedException MongoException
-     */
-    public function testToMongoTypeWrongClass()
-    {
-        $value = $this->createMock(TestHelper::class);
-        $result = DB::toMongoType($value);
-    }
-
-    /**
-     * Test 'toMongoType' method with recursive conversion
-     */
-    public function testToMongoTypeRecursive()
-    {
-        $entity = $this->createMock(Entity::class);
-        $entity->expects($this->once())->method('toData')->willReturn(['en1' => 'val1', 'en2' => 'val2']);
-
-        $entity2 = $this->createMock(Entity::class);
-        $entity2->expects($this->once())->method('toData')->willReturn((object)['test' => 'rest']);
-
-        $set = $this->createMock(EntitySet::class);
-        $set->expects($this->once())->method('getArrayCopy')->willReturn(['key' => $entity2]);
-
-        $data = [
-            'foo' => 'bar',
-            'foo2' => $entity,
-            'foo3' => [
-                '$baz' => $set
-            ]
-        ];
-
-        $value = $this->createMock(\ArrayObject::class);
-        $value->expects($this->once())->method('getArrayCopy')->willReturn($data);
-
-        $result = DB::toMongoType($value, true);
-
-        $expected = [
-            'foo' => 'bar',
-            'foo2' => ['en1' => 'val1', 'en2' => 'val2'],
-            'foo3' => [
-                '\\u0024baz' => [
-                    'key' => (object)['test' => 'rest']
-                ]
-            ]
-        ];
-
-        $this->assertEquals($expected, $result);
-    }
-
-    /**
-     * Provide data for testing 'fromMongoType' method
-     *
-     * @return array
-     */
-    public function fromMongoTypeProvider()
-    {
-        $values = [
-            $this->createMock(\MongoDBRef::class),
-            $this->createMock(\MongoInt32::class),
-            $this->createMock(\MongoInt64::class),
-            $this->createMock(\MongoId::class),
-            $this->createMock(\MongoMaxKey::class),
-            $this->createMock(\MongoMinKey::class),
-            $this->createMock(\MongoRegex::class),
-            $this->createMock(\MongoTimestamp::class)
-        ];
-
-        //Use closure as provided value, because data provider can not provide unclonable values (e.g. mongo types)
-        $func = function($value) {
-            return function() use ($value) {
-                return $value;
-            };
-        };
-
-        return [
-            [$func($values[0])],
-            [$func($values[1])],
-            [$func($values[2])],
-            [$func($values[3])],
-            [$func($values[4])],
-            [$func($values[5])],
-            [$func($values[6])],
-            [$func($values[7])]
-        ];
-    }
-
-    /**
-     * Test 'fromMongoType' method with arguments of mongo classes
-     *
-     * @dataProvider fromMongoTypeProvider
-     * @param Closure $value
-     */
-    public function testFromMongoType($value)
-    {
-        $result = DB::fromMongoType($value());
-        $this->assertEquals($value(), $result);
-    }
-
-    /**
-     * Test 'fromMongoType' method with \MongoDate argument
-     */
-    public function testFromMongoTypeDate()
-    {
-        $value = $this->createMock(\MongoDate::class);
-        $this->setPrivateProperty($value, 'sec', 123);
-
-        $result = DB::fromMongoType($value);
-
-        $this->assertInstanceOf(\DateTime::class, $result);
-        $this->assertEquals(123, $result->getTimestamp());
-    }
-
-    /**
-     * Test 'fromMongoType' method with \MongoBinData argument
-     */
-    public function testFromMongoTypeBlob()
-    {
-        $value = $this->createMock(\MongoBinData::class);
-        $this->setPrivateProperty($value, 'bin', 'Some data');
-
-        $result = DB::fromMongoType($value);
-
-        $this->assertInstanceOf(Blob::class, $result);
-        $this->assertEquals('Some data', (string)$result);
-    }
-
-    /**
-     * Test 'fromMongoType' method for recursive conversion
-     */
-    public function testFromMongoTypeRecursive()
-    {
-        $value = [
-            'foo' => 'bar',
-            'foo2' => (object)['en1' => 'val1', 'en2\\u002een3' => 'val2'],
-            'foo3' => [
-                '\\u0024baz' => [
-                    'key' => ['test', 'rest']
-                ]
-            ],
-            'foo4' => []
-        ];
-
-        $expected = (object)[
-            'foo' => 'bar',
-            'foo2' => (object)['en1' => 'val1', 'en2.en3' => 'val2'],
-            'foo3' => (object)[
-                '$baz' => (object)[
-                    'key' => ['test', 'rest']
-                ]
-            ],
-            'foo4' => []
-        ];
-
-        $result = DB::fromMongoType($value);
-
-        $this->assertEquals($expected, $result);
     }
 
     /**

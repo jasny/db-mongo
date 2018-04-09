@@ -9,8 +9,14 @@ namespace Jasny\DB\Mongo;
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-class Cursor extends \MongoCursor
+class Cursor implements \IteratorAggregate
 {
+    /**
+     * Php mongo driver cursor
+     * @var MongoDB\Driver\Cursor
+     */
+    protected $cursor;
+
     /**
      * Record class
      * @var Collection
@@ -27,17 +33,15 @@ class Cursor extends \MongoCursor
      * Class constructor
      *
      * @codeCoverageIgnore
-     * @param \MongoClient      $connection
-     * @param Collection|string $ns
-     * @param array             $query
-     * @param array             $fields
+     * @param \MongoDB\Driver\Cursor  $cursor
+     * @param Collection              $collection
+     * @param boolean                 $lazy
      */
-    public function __construct(\MongoClient $connection, $ns, array $query = [], array $fields = [])
+    public function __construct(\MongoDB\Driver\Cursor $cursor, Collection $collection, $lazy)
     {
-        if ($ns instanceof Collection) $this->collection = $ns;
-        $this->lazy = !empty($fields);
-
-        parent::__construct($connection, (string)$ns, $query, $fields);
+        $this->cursor = $cursor;
+        $this->collection = $collection;
+        $this->lazy = !!$lazy;
     }
 
     /**
@@ -51,30 +55,40 @@ class Cursor extends \MongoCursor
     }
 
     /**
-     * Returns the current element
-     *
-     * @codeCoverageIgnore
-     * @return array|object
+     * Get iterator, that can cast fetched records to collection class
+     * @return generator
      */
-    public function current()
+    public function getIterator()
     {
-        $values = parent::current();
+        $documentClass = isset($this->collection) ? $this->collection->getDocumentClass() : null;
+        $self = $this;
 
-        if (isset($values) && isset($this->collection) && $this->collection->getDocumentClass()) {
-            $values = $this->collection->asDocument($values, $this->lazy);
-        }
+        $generator = function () use ($documentClass, $self) {
+            foreach ($self->cursor as $key => $values) {
+                if ($values && $documentClass) {
+                    $values = $self->collection->asDocument($values, $this->lazy);
+                }
 
-        return $values;
+                yield $key => $values;
+            }
+        };
+
+        return $generator();
     }
 
     /**
-     * Return the next object to which this cursor points, and advance the cursor
+     * Call methods of driver cursor
      *
-     * @return array|object
+     * @param string $method
+     * @param array $args
+     * @return mixed
      */
-    public function getNext()
+    public function __call($method, $args)
     {
-        $this->next();
-        return $this->current();
+        if (method_exists($this->cursor, $method)) {
+            return call_user_func_array([$this->cursor, $method], $args);
+        }
+
+        throw new \BadMethodCallException("Method '$method' does not exists");
     }
 }
