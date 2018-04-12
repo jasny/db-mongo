@@ -53,9 +53,10 @@ class Collection extends \MongoDB\Collection
      * @param array $options
      * @return boolean
      */
-    public function createIndex(array $keys, array $options = [])
+    public function createIndex($keys, array $options = [])
     {
         $ret = false;
+        $keys = (array)$keys;
 
         try {
             $ret = $this->parent('createIndex', $keys, $options);
@@ -107,15 +108,12 @@ class Collection extends \MongoDB\Collection
      * @param array        $options  Options for the save.
      * @return array|boolean
      */
-    public function replaceOne($filter, &$doc, array $options = [])
+    public function replaceOne($filter, $doc, array $options = [])
     {
         $typeCast = $this->getTypeCaster();
         $values = $typeCast->toMongoType($doc, true);
-        $ret = $this->parent('replaceOne', $filter, $values, $options);
 
-        $this->setDocId($doc, $ret->getUpsertedId());
-
-        return $ret;
+        return $this->parent('replaceOne', $filter, $values, $options);
     }
 
     /**
@@ -126,15 +124,12 @@ class Collection extends \MongoDB\Collection
      * @param array        $options  Options for the save.
      * @return array|boolean
      */
-    public function insertOne(&$doc, array $options = [])
+    public function insertOne($doc, array $options = [])
     {
         $typeCast = $this->getTypeCaster();
         $values = $typeCast->toMongoType($doc, true);
-        $ret = $this->parent('insertOne', $values, $options);
 
-        $this->setDocId($doc, $ret->getInsertedId());
-
-        return $ret;
+        return $this->parent('insertOne', $values, $options);
     }
 
     /**
@@ -145,7 +140,7 @@ class Collection extends \MongoDB\Collection
      * @param array $options
      * @return mixed
      */
-    public function insertMany(array &$docs, array $options = [])
+    public function insertMany(array $docs, array $options = [])
     {
         $data = [];
         $typeCast = $this->getTypeCaster();
@@ -154,14 +149,7 @@ class Collection extends \MongoDB\Collection
             $data[] = $typeCast->toMongoType($doc, true);
         }
 
-        $ret = $this->parent('insertMany', $data, $options);
-        $ids = $ret->getInsertedIds();
-
-        foreach ($ids as $i => $id) {
-            $this->setDocId($docs[$i], $id);
-        }
-
-        return $ret;
+        return $this->parent('insertMany', $data, $options);
     }
 
     /**
@@ -171,7 +159,7 @@ class Collection extends \MongoDB\Collection
      * @param array        $options  Options for the save.
      * @return array|boolean
      */
-    public function save(&$doc, array $options = [])
+    public function save($doc, array $options = [])
     {
         $typeCast = $this->getTypeCaster();
         $values = $typeCast->toMongoType($doc, true);
@@ -197,25 +185,6 @@ class Collection extends \MongoDB\Collection
         $filter = array_intersect_key($array, ['_id' => 1]);
 
         return $filter;
-    }
-
-    /**
-     * Update the identifier
-     *
-     * @param array|object           $doc
-     * @param MongoDB\BSON\ObjectId  $id
-     */
-    protected function setDocId(&$doc, $id)
-    {
-        if (!$id) {
-            return;
-        }
-
-        if (is_array($doc)) {
-            $doc['_id'] = $id;
-        } else {
-            $doc->_id = $id;
-        }
     }
 
     /**

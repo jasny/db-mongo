@@ -29,16 +29,30 @@ class CollectionTest extends TestHelper
     }
 
     /**
-     * Test 'createIndex' method with no deletion or exception
+     * Provide data for testing 'createIndex' method
+     *
+     * @return array
      */
-    public function testCreateIndex()
+    public function createIndexProvider()
     {
-        $keys = ['foo' => 1];
+        return [
+            [['foo' => 1]],
+            [(object)['foo' => 1]]
+        ];
+    }
+
+    /**
+     * Test 'createIndex' method with no deletion or exception
+     *
+     * @dataProvider createIndexProvider
+     */
+    public function testCreateIndex($keys)
+    {
         $options = ['zoo' => 'baz'];
         $expected = 'foo_result';
 
         $collection = $this->createPartialMock(Collection::class, ['parent']);
-        $collection->expects($this->once())->method('parent', $keys, $options)->willReturn($expected);
+        $collection->expects($this->once())->method('parent', (array)$keys, $options)->willReturn($expected);
 
         $result = $collection->createIndex($keys, $options);
 
@@ -67,7 +81,7 @@ class CollectionTest extends TestHelper
      */
     public function testCreateIndexException($exception, $options)
     {
-        $keys = ['foo' => 'bar'];
+        $keys = ['foo' => 1];
 
         $collection = $this->createPartialMock(Collection::class, ['parent']);
         $collection->expects($this->once())->method('parent', $keys, $options)->willThrowException($exception);
@@ -78,10 +92,11 @@ class CollectionTest extends TestHelper
 
     /**
      * Test 'createIndex' method with deleting existing index
+     *
+     * @dataProvider createIndexProvider
      */
-    public function testCreateIndexForce()
+    public function testCreateIndexForce($keys)
     {
-        $keys = ['foo' => 1];
         $options = ['force' => true];
         $callbackState = (object)['called' => 0];
 
@@ -96,7 +111,7 @@ class CollectionTest extends TestHelper
         };
 
         $collection = $this->createPartialMock(Collection::class, ['parent', 'dropIndex']);
-        $collection->expects($this->exactly(2))->method('parent', $keys, $options)->will($this->returnCallback($callback));
+        $collection->expects($this->exactly(2))->method('parent', (array)$keys, $options)->will($this->returnCallback($callback));
         $collection->expects($this->once())->method('dropIndex')->with('foo');
 
         $result = $collection->createIndex($keys, $options);
@@ -106,10 +121,11 @@ class CollectionTest extends TestHelper
 
     /**
      * Test 'createIndex' method with deleting existing index
+     *
+     * @dataProvider createIndexProvider
      */
-    public function testCreateIndexIgnore()
+    public function testCreateIndexIgnore($keys)
     {
-        $keys = ['foo' => 1];
         $options = ['ignore' => true];
 
         $callback = function($keysArg, $optionsArg) {
@@ -117,7 +133,7 @@ class CollectionTest extends TestHelper
         };
 
         $collection = $this->createPartialMock(Collection::class, ['parent', 'dropIndex']);
-        $collection->expects($this->once())->method('parent', $keys, $options)->will($this->returnCallback($callback));
+        $collection->expects($this->once())->method('parent', (array)$keys, $options)->will($this->returnCallback($callback));
         $collection->expects($this->never())->method('dropIndex');
 
         $result = $collection->createIndex($keys, $options);
@@ -167,8 +183,8 @@ class CollectionTest extends TestHelper
     public function insertOneProvider()
     {
         return [
-            [['foo' => 'bar'], ['foo' => 'bar', '_id' => 'foo_id']],
-            [(object)['foo' => 'bar'], (object)['foo' => 'bar', '_id' => 'foo_id']],
+            [['foo' => 'bar']],
+            [(object)['foo' => 'bar']],
         ];
     }
 
@@ -177,9 +193,8 @@ class CollectionTest extends TestHelper
      *
      * @dataProvider insertOneProvider
      */
-    public function testInsertOne($document, $expectedDocument)
+    public function testInsertOne($document)
     {
-        $id = 'foo_id';
         $options = ['opt1' => 'val1'];
         $values = (array)$document;
         $queryResult = $this->createMock(\MongoDB\InsertOneResult::class);
@@ -190,11 +205,9 @@ class CollectionTest extends TestHelper
         $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
         $typeCast->expects($this->once())->method('toMongoType')->with($document, true)->willReturn($values);
         $collection->expects($this->once())->method('parent')->with('insertOne', $values, $options)->willReturn($queryResult);
-        $queryResult->expects($this->once())->method('getInsertedId')->willReturn($id);
 
         $result = $collection->insertOne($document, $options);
         $this->assertSame($queryResult, $result);
-        $this->assertEquals($expectedDocument, $document);
     }
 
     /**
@@ -215,12 +228,6 @@ class CollectionTest extends TestHelper
             ['foo3' => 'bar3']
         ];
 
-        $expectedDocs = [
-            ['foo' => 'bar', '_id' => 'a'],
-            ['foo2' => 'bar2', '_id' => 'b'],
-            (object)['foo3' => 'bar3', '_id' => 'c']
-        ];
-
         $queryResult = $this->createMock(\MongoDB\InsertManyResult::class);
 
         $typeCast = $this->createMock(DeepCast::class);
@@ -233,11 +240,9 @@ class CollectionTest extends TestHelper
         $collection = $this->createPartialMock(Collection::class, ['getTypeCaster', 'parent']);
         $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
         $collection->expects($this->once())->method('parent')->with('insertMany', $data, $options)->willReturn($queryResult);
-        $queryResult->expects($this->once())->method('getInsertedIds')->willReturn(['a', 'b', 'c']);
 
         $result = $collection->insertMany($docs, $options);
         $this->assertSame($queryResult, $result);
-        $this->assertEquals($expectedDocs, $docs);
     }
 
     /**
@@ -245,9 +250,8 @@ class CollectionTest extends TestHelper
      *
      * @dataProvider insertOneProvider
      */
-    public function testReplaceOne($document, $expectedDocument)
+    public function testReplaceOne($document)
     {
-        $id = 'foo_id';
         $options = ['opt1' => 'val1'];
         $filter = ['match_key' => 'val'];
         $values = (array)$document;
@@ -259,36 +263,9 @@ class CollectionTest extends TestHelper
         $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
         $typeCast->expects($this->once())->method('toMongoType')->with($document, true)->willReturn($values);
         $collection->expects($this->once())->method('parent')->with('replaceOne', $filter, $values, $options)->willReturn($queryResult);
-        $queryResult->expects($this->once())->method('getUpsertedId')->willReturn($id);
 
         $result = $collection->replaceOne($filter, $document, $options);
         $this->assertSame($queryResult, $result);
-        $this->assertEquals($expectedDocument, $document);
-    }
-
-    /**
-     * Test 'replaceOne' method, if no record was replaced
-     */
-    public function testReplaceOneNoReplaced()
-    {
-        $id = 'foo_id';
-        $document = ['foo' => 'bar'];
-        $options = ['opt1' => 'val1'];
-        $filter = ['match_key' => 'val'];
-        $values = (array)$document;
-        $queryResult = $this->createMock(\MongoDB\UpdateResult::class);
-
-        $typeCast = $this->createMock(DeepCast::class);
-
-        $collection = $this->createPartialMock(Collection::class, ['getTypeCaster', 'parent']);
-        $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
-        $typeCast->expects($this->once())->method('toMongoType')->with($document, true)->willReturn($values);
-        $collection->expects($this->once())->method('parent')->with('replaceOne', $filter, $values, $options)->willReturn($queryResult);
-        $queryResult->expects($this->once())->method('getUpsertedId')->willReturn(null);
-
-        $result = $collection->replaceOne($filter, $document, $options);
-        $this->assertSame($queryResult, $result);
-        $this->assertEquals(['foo' => 'bar'], $document);
     }
 
     /**
