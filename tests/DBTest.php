@@ -45,7 +45,7 @@ class DBTest extends TestHelper
         $result = $this->callProtectedMethod($mock, 'createClientFromOptions', [$options]);
         $this->assertInstanceOf(Client::class, $result);
 
-        $uri = $this->getPrivatePropery($result, 'uri');
+        $uri = $this->getPrivateProperty($result, 'uri');
         $this->assertSame($expectedUri, $uri);
     }
 

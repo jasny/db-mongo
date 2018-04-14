@@ -35,6 +35,12 @@ class TestDocumentMetaSearch implements Identifiable, Sorted, TypeCasting
     public static $connectionMock;
 
     /**
+     * Collection mock
+     * @var Jasny\DB\Mongo\Collection
+     **/
+    public static $collectionMock;
+
+    /**
      * EntitySet stub
      * @var array
      **/
@@ -63,6 +69,12 @@ class TestDocumentMetaSearch implements Identifiable, Sorted, TypeCasting
     public $zoo;
 
     /**
+     * Hidden var
+     * @var string
+     **/
+    protected $potato;
+
+    /**
      * Get the database connection mock
      *
      * @return Jasny\DB
@@ -70,6 +82,33 @@ class TestDocumentMetaSearch implements Identifiable, Sorted, TypeCasting
     protected static function getDB()
     {
         return static::$connectionMock;
+    }
+
+    /**
+     * Get the Mongo collection mock
+     *
+     * @return \Jasny\DB\Mongo\Collection
+     */
+    protected static function getCollection()
+    {
+        return static::$collectionMock;
+    }
+
+    /**
+     * Check if a document exists.
+     *
+     * @param string|array $id  ID or filter
+     * @param array        $opts
+     * @return boolean
+     */
+    public static function exists($id, array $opts = [])
+    {
+        if (is_callable($opts['checkArgs'])) {
+            $func = $opts['checkArgs'];
+            $func($id);
+        }
+
+        return !$opts['fooReturn']; //Return params to check if they were passed correctly
     }
 
     /**

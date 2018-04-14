@@ -101,16 +101,16 @@ trait BasicImplementation
      * Convert child to an id
      *
      * @param Entity $item
-     * @return \MongoId|mixed
+     * @return \MongoDB\BSON\ObjectId|mixed
      */
     protected function childEntityToId(Entity $item)
     {
         if (
             $item instanceof Meta\Introspection &&
             is_scalar($item::getIdProperty()) &&
-            $item::meta()->ofProperty($item::getIdProperty())['dbFieldType'] === '\MongoId'
+            $item::meta()->ofProperty($item::getIdProperty())['dbFieldType'] === '\\MongoDB\\BSON\\ObjectId'
         ) {
-            $id = new \MongoId($item->getId());
+            $id = new \MongoDB\BSON\ObjectId($item->getId());
         } else {
             $id = $item->getId();
         }
@@ -132,15 +132,17 @@ trait BasicImplementation
         }
 
         $data = $this->toData();
+        $collection = static::getCollection();
 
         if ($this instanceof ChangeAware && $this->isNew()) {
-            static::getCollection()->insert($data);
+            $result = $collection->insertOne($data, $opts);
         } else {
-            static::getCollection()->save($data);
+            $result = $collection->save($data, $opts);
         }
 
-        $idProp = static::getIdProperty();
-        $this->$idProp = $data['_id'];
+        $idName = static::getIdProperty();
+        $collection->useResultId($this, $idName, $result);
+
         $this->cast();
 
         return $this;
@@ -149,7 +151,6 @@ trait BasicImplementation
     /**
      * Delete the document
      *
-     * @codeCoverageIgnore
      * @param array $opts
      * @return $this
      */
@@ -159,14 +160,13 @@ trait BasicImplementation
         $filter = static::castForDB($properties);
         $query = static::mapToFields($filter);
 
-        static::getCollection()->remove($query);
+        static::getCollection()->deleteOne($query, $opts);
         return $this;
     }
 
     /**
      * Reload the entity from the DB
      *
-     * @codeCoverageIgnore
      * @param array $opts
      * @return $this|false
      */
@@ -190,7 +190,6 @@ trait BasicImplementation
     /**
      * Check no other document with the same value of the property exists
      *
-     * @codeCoverageIgnore
      * @param string        $property
      * @param array|string  $group     List of properties that should match
      * @param array         $opts
@@ -226,7 +225,7 @@ trait BasicImplementation
         foreach ($values as &$value) {
             if ($value instanceof \DateTime) {
                 $value = $value->format(\DateTime::ISO8601);
-            } elseif ($value instanceof \MongoId) {
+            } elseif ($value instanceof \MongoDB\BSON\ObjectId) {
                 $value = (string)$value;
             }
         }
