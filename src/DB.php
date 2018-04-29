@@ -71,7 +71,7 @@ class DB extends \MongoDB\Database implements Connection, Connection\Namable
      * @param array $options
      * @return Mongo\DB\Collection
      */
-    public function selectCollection($name, $options = [])
+    public function selectCollection($name, array $options = [])
     {
         return new Collection(
             $this->getManager(),
