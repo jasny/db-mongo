@@ -93,120 +93,6 @@ class DB extends \MongoDB\Database implements Connection, Connection\Namable
     }
 
     /**
-     * Check if value is a MongoDB specific type
-     *
-     * @param mixed $value
-     * @return boolean
-     */
-    protected static function isMongoType($value)
-    {
-        return
-            $value instanceof BSON\Binary ||
-            $value instanceof BSON\UTCDateTime ||
-            $value instanceof BSON\Decimal128 ||
-            $value instanceof BSON\ObjectId ||
-            $value instanceof BSON\MaxKey ||
-            $value instanceof BSON\MinKey ||
-            $value instanceof BSON\Regex ||
-            $value instanceof BSON\Timestamp;
-    }
-
-
-    /**
-     * Convert property to mongo type.
-     * Works recursively for objects and arrays.
-     *
-     * @param mixed   $value
-     * @param boolean $escapeKeys  Escape '.' and '$'
-     * @return mixed
-     */
-    public static function toMongoType($value, $escapeKeys = false)
-    {
-        // return true;
-
-        if (static::isMongoType($value)) {
-            return $value;
-        }
-
-        if ($value instanceof \DateTime) {
-            return new BSON\UTCDateTime($value->getTimestamp() * 1000);
-        }
-
-        if ($value instanceof Blob) {
-            return new BSON\Binary($value, BSON\Binary::TYPE_GENERIC);
-        }
-
-        if ($value instanceof Entity\Identifiable) {
-            $data = $value->toData();
-            return isset($data['_id']) ? $data['_id'] : $value->getId();
-        }
-
-        if ($value instanceof Entity) {
-            $value = $value->toData();
-        }
-
-        if ($value instanceof \ArrayObject || $value instanceof EntitySet) {
-            $value = $value->getArrayCopy();
-        }
-
-        if (is_object($value) && !$value instanceof \stdClass) {
-            throw new \MongoDB\Exception\InvalidArgumentException("Don't know how to cast a " . get_class($value) . " object to a mongo type");
-        }
-
-        if (is_array($value) || $value instanceof \stdClass) {
-            $copy = [];
-
-            foreach ($value as $k => $v) {
-                $key = $escapeKeys ? strtr($k, ['\\' => '\\\\', '$' => '\\u0024', '.' => '\\u002e']) : $k;
-                $copy[$key] = static::toMongoType($v, $escapeKeys); // Recursion
-            }
-
-            $value = is_object($value) ? (object)$copy : $copy;
-        }
-
-        return $value;
-    }
-
-    /**
-     * Convert mongo type to value
-     *
-     * @param mixed   $value
-     * @param boolean $translateKeys
-     * @return mixed
-     */
-    public static function fromMongoType($value)
-    {
-        if (is_array($value) || $value instanceof \stdClass) {
-            $out = [];
-
-            foreach ($value as $k => $v) {
-                // Unescape special characters in keys
-                $unescape = strpos($k, '\\\\') !== false || strpos($k, '\\u') !== false;
-                $key = $unescape ? json_decode('"' . addcslashes($k, '"') . '"') : $k;
-
-                $out[$key] = self::fromMongoType($v); // Recursion
-            }
-
-            $isNumeric = is_array($value) &&
-                (key($value) === 0 && array_keys($value) === array_keys(array_fill(0, count($value), null))) ||
-                !count($value);
-
-            return !$isNumeric ? (object)$out : $out;
-        }
-
-        if ($value instanceof BSON\UTCDateTime) {
-            return $value->toDateTime();
-        }
-
-        if ($value instanceof BSON\Binary) {
-            return new Blob($value->getData());
-        }
-
-        return $value;
-    }
-
-
-    /**
      * Convert a Jasny DB styled filter to a MongoDB query.
      *
      * @param array $filter
@@ -215,6 +101,7 @@ class DB extends \MongoDB\Database implements Connection, Connection\Namable
     public static function filterToQuery($filter)
     {
         $query = [];
+        $typeCast = new TypeCast\DeepCast();
 
         foreach ($filter as $key => $filterVal) {
             if ($key[0] === '$') {
@@ -222,7 +109,7 @@ class DB extends \MongoDB\Database implements Connection, Connection\Namable
             }
 
             list($field, $operator) = array_map('trim', explode('(', str_replace(')', '', $key))) + [1 => null];
-            $value = static::toMongoType($filterVal);
+            $value = $typeCast->toMongoType($filterVal);
 
             switch ($operator) {
                 case '':     $query[$field] = $value; break;

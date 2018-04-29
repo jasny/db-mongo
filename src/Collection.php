@@ -4,8 +4,7 @@ namespace Jasny\DB\Mongo;
 
 use Jasny\DB\Mongo\Cursor,
     Jasny\DB\Entity,
-    MongoDB\Driver\Manager,
-    MongoDB\Collection as MongoCollection;
+    MongoDB\Driver\Manager;
 
 /**
  * Mongo collection which produces Document objects
@@ -14,8 +13,10 @@ use Jasny\DB\Mongo\Cursor,
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.io/db-mongo
  */
-class Collection extends MongoCollection
+class Collection extends \MongoDB\Collection
 {
+    use ParentCallTestable;
+
     /**
      * Entity class
      * @var string
@@ -42,26 +43,6 @@ class Collection extends MongoCollection
     }
 
     /**
-     * Create indexes
-     *
-     * @param array $indexes
-     */
-    public function createIndexes(array $indexes)
-    {
-        foreach ($indexes as $index) {
-            $options = isset($index['$options']) ? $index['$options'] : [];
-            unset($index['$options']);
-
-            if (!empty($options['delete'])) {
-                $this->deleteIndex($index);
-                continue;
-            }
-
-            $this->createIndex($index, $options);
-        }
-    }
-
-    /**
      * Creates an index on the specified field(s) if it does not already exist.
      *
      * Additinal options are available:
@@ -75,18 +56,18 @@ class Collection extends MongoCollection
     public function createIndex(array $keys, array $options = [])
     {
         $ret = false;
-        $fn = $this->getCreateIndexMethod();
 
         try {
-            $ret = call_user_func($fn, $keys, $options);
-        } catch (\MongoCursorException $e) {
+            $ret = $this->parent('createIndex', $keys, $options);
+        } catch (\MongoDB\Driver\Exception\RuntimeException $e) {
             if ($e->getCode() != 85 || (empty($options['ignore']) && empty($options['force']))) { // 85 - index exists
                 throw $e;
             }
 
             if (!empty($options['force'])) {
-                $this->deleteIndex($keys);
-                $ret = call_user_func($fn, $keys, $options);
+                $name = array_keys($keys)[0];
+                $this->dropIndex($name);
+                $ret = $this->parent('createIndex', $keys, $options);
             }
         }
 
@@ -94,27 +75,17 @@ class Collection extends MongoCollection
     }
 
     /**
-     * Get method to call for creating index
-     *
-     * @codeCoverageIgnore
-     * @return callback
-     */
-    protected function getCreateIndexMethod()
-    {
-        $fn = method_exists(\MongoCollection::class, 'createIndex') ? 'createIndex' : 'ensureIndex'; // BC
-
-        return [\MongoCollection::class, $fn];
-    }
-
-    /**
      * Get a Collection object where casting to a document object is disabled
      *
-     * @codeCoverageIgnore
      * @return static
      */
     public function withoutCasting()
     {
-        return new static($this->db, $this->getName());
+        return new Collection(
+            $this->getManager(),
+            $this->getDatabaseName(),
+            $this->getCollectionName()
+        );
     }
 
     /**
@@ -128,45 +99,66 @@ class Collection extends MongoCollection
     }
 
     /**
-     * Insert a document to this collection
-     * @link http://php.net/manual/en/mongocollection.insert.php
+     * Replace a document in collection
+     * @link https://docs.mongodb.com/php-library/current/reference/method/MongoDBCollection-replaceOne/
      *
-     * @codeCoverageIgnore
+     * @param array|object $filter
      * @param array|object $doc      Array or object to save.
      * @param array        $options  Options for the save.
      * @return array|boolean
      */
-    public function insert(&$doc, array $options = [])
+    public function replaceOne($filter, &$doc, array $options = [])
     {
-        $values = $this->db->toMongoType($doc, true);
-        $ret = parent::insert($values, $options);
+        $typeCast = $this->getTypeCaster();
+        $values = $typeCast->toMongoType($doc, true);
+        $ret = $this->parent('replaceOne', $filter, $values, $options);
 
-        $this->setDocId($doc, $values);
+        $this->setDocId($doc, $ret->getUpsertedId());
+
+        return $ret;
+    }
+
+    /**
+     * Insert a document to this collection
+     * @link https://docs.mongodb.com/php-library/current/reference/method/MongoDBCollection-insertOne/
+     *
+     * @param array|object $doc      Array or object to save.
+     * @param array        $options  Options for the save.
+     * @return array|boolean
+     */
+    public function insertOne(&$doc, array $options = [])
+    {
+        $typeCast = $this->getTypeCaster();
+        $values = $typeCast->toMongoType($doc, true);
+        $ret = $this->parent('insertOne', $values, $options);
+
+        $this->setDocId($doc, $ret->getInsertedId());
 
         return $ret;
     }
 
     /**
      * Inserts multiple documents into this collection
-     * @link http://php.net/manual/en/mongocollection.batchinsert.php
+     * @link https://docs.mongodb.com/php-library/current/reference/method/MongoDBCollection-insertMany/
      *
-     * @codeCoverageIgnore
      * @param array $docs
      * @param array $options
      * @return mixed
      */
-    public function batchInsert(array &$docs, array $options = [])
+    public function insertMany(array &$docs, array $options = [])
     {
-        $a = [];
+        $data = [];
+        $typeCast = $this->getTypeCaster();
 
         foreach ($docs as $doc) {
-            $a[] = $this->db->toMongoType($doc, true);
+            $data[] = $typeCast->toMongoType($doc, true);
         }
 
-        $ret = parent::batchInsert($a, $options);
+        $ret = $this->parent('insertMany', $data, $options);
+        $ids = $ret->getInsertedIds();
 
-        foreach ($a as $i => $values) {
-            $this->setDocId($docs[$i], $values);
+        foreach ($ids as $i => $id) {
+            $this->setDocId($docs[$i], $id);
         }
 
         return $ret;
@@ -174,40 +166,55 @@ class Collection extends MongoCollection
 
     /**
      * Saves a document to this collection
-     * @link http://php.net/manual/en/mongocollection.save.php
      *
-     * @codeCoverageIgnore
      * @param array|object $doc      Array or object to save.
      * @param array        $options  Options for the save.
      * @return array|boolean
      */
     public function save(&$doc, array $options = [])
     {
-        $values = $this->db->toMongoType($doc, true);
-        $ret = parent::save($values, $options);
+        $typeCast = $this->getTypeCaster();
+        $values = $typeCast->toMongoType($doc, true);
+        $filter = $this->createReplaceOneFilter($values);
 
-        $this->setDocId($doc, $values);
+        if ($filter) {
+            $options = array_merge(['upsert' => true], $options);
+            return $this->replaceOne($filter, $doc, $options);
+        }
 
-        return $ret;
+        return $this->insertOne($doc, $options);
+    }
+
+    /**
+     * Create filter for replacing document
+     *
+     * @param array|object $values
+     * @return array
+     */
+    protected function createReplaceOneFilter($values)
+    {
+        $array = (array)$values;
+        $filter = array_intersect_key($array, ['_id' => 1]);
+
+        return $filter;
     }
 
     /**
      * Update the identifier
      *
-     * @codeCoverageIgnore
-     * @param array|object $doc
-     * @param array        $values
+     * @param array|object           $doc
+     * @param MongoDB\BSON\ObjectId  $id
      */
-    protected function setDocId(&$doc, $values)
+    protected function setDocId(&$doc, $id)
     {
-        if (!isset($values['_id'])) {
+        if (!$id) {
             return;
         }
 
         if (is_array($doc)) {
-            $doc['_id'] = $values['_id'];
+            $doc['_id'] = $id;
         } else {
-            $doc->_id = $values['_id'];
+            $doc->_id = $id;
         }
     }
 
@@ -234,8 +241,10 @@ class Collection extends MongoCollection
             throw new \LogicException($msg);
         }
 
+        $typeCast = $this->getTypeCaster();
+
         foreach ($values as &$value) {
-            $value = $this->db->fromMongoType($value);
+            $value = $typeCast->fromMongoType($value);
         }
 
         return $class::fromData($values);
@@ -243,36 +252,61 @@ class Collection extends MongoCollection
 
     /**
      * Query this collection.
-     * The cursor will return Document objects, unless you specify fields.
+     * The cursor will return Document objects.
      *
-     * @codeCoverageIgnore
-     * @param array $query   Search query
-     * @param array $fields  Fields to return
+     * @param array $filter   Search filter
+     * @param array $options  Options
      * @return Cursor
      */
-    public function find(array $query = [], array $fields = [])
+    public function find($filter = [], array $options = [])
     {
-        return new Cursor($this->db->getClient(), $this, $query, $fields);
+        $cursor = $this->parent('find', $filter, $options);
+        $lazy = !empty($options['projection']);
+
+        return $this->createCursor($cursor, $lazy);
     }
 
     /**
      * Queries this collection, returning a single element.
      * Returns a Document object, unless you specify fields.
      *
-     * @codeCoverageIgnore
-     * @param array $query   Fields for which to search
-     * @param array $fields  Fields of the results to return
+     * @param array $filter
+     * @param array $options
      * @return array|Document
      */
-    public function findOne($query = [], array $fields = [])
+    public function findOne($filter = [], array $options = [])
     {
-        $values = parent::findOne($query, $fields);
+        $values = $this->parent('findOne', $filter, $options);
 
         if (isset($this->documentClass) && isset($values)) {
-            $values = $this->asDocument($values, !empty($fields));
+            $values = $this->asDocument($values, !empty($options['projection']));
         }
 
         return $values;
+    }
+
+    /**
+     * Get TypeCast instance
+     *
+     * @codeCoverageIgnore
+     * @return Jasny\DB\Mongo\TypeCast\DeepCast
+     */
+    protected function getTypeCaster()
+    {
+        return new TypeCast\DeepCast();
+    }
+
+    /**
+     * Create cursor with result of 'find' method
+     *
+     * @codeCoverageIgnore
+     * @param MongoDB\Driver\Cursor $cursor
+     * @param boolean $lazy
+     * @return Cursor
+     */
+    protected function createCursor($cursor, $lazy)
+    {
+        return new Cursor($cursor, $this, $lazy);
     }
 }
 
