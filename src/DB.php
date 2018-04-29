@@ -5,7 +5,10 @@ namespace Jasny\DB\Mongo;
 use Jasny\DB\Connection,
     Jasny\DB\Entity,
     Jasny\DB\EntitySet,
-    Jasny\DB\Blob;
+    Jasny\DB\Blob,
+    MongoDB\Client,
+    MongoDB\Driver\Manager,
+    MongoDB\BSON;
 
 /**
  * Instances of this class are used to interact with a Mongo database.
@@ -14,7 +17,7 @@ use Jasny\DB\Connection,
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.com/db-mongo
  */
-class DB extends \MongoDB implements Connection, Connection\Namable
+class DB extends \MongoDB\Database implements Connection, Connection\Namable
 {
     use Connection\Namable\Implemention;
 
@@ -22,60 +25,60 @@ class DB extends \MongoDB implements Connection, Connection\Namable
     const DESCENDING = -1;
 
     /**
-     * @var MongoClient
-     */
-    protected $mongoClient;
-
-    /**
-     * @param \MongoClient|string|array $client  Client or settings
-     * @param string                    $name
+     * @param \MongoDB\Driver\Manager|string|array $client  Manager or settings
+     * @param string                                        $name
+     * @param array $options
      * @codeCoverageIgnore
      */
-    public function __construct($client, $name = null)
+    public function __construct($manager, $name = null, $options = [])
     {
-        if (is_array($client) || (is_object($client) && !$client instanceof \MongoClient)) {
-            $options = (array)$client;
-            $name = isset($options['database']) ? $options['database'] : null;
-
-            $server = $options['client'];
-            if (!strpos($options['client'], '/') && isset($name)) {
-                $server .= '/' . $name;
-            }
-
-            unset($options['client'], $options['database']);
-
-            $client = new \MongoClient($server, $options);
+        if (is_array($manager) || $manager instanceof \stdClass) {
+            $client = $this->createManagerFromOptions($manager);
+            $manager = $client->getManager();
+        } else if (is_string($manager)) {
+            $manager = new Manager($manager);
         }
 
-        if (is_string($client)) {
-            $client = new \MongoClient($client);
-        }
-
-        parent::__construct($client, $name);
-        $this->mongoClient = $client;
+        parent::__construct($manager, $name, $options);
     }
 
     /**
-     * Get the client connection
+     * Create an instance of mongo client from a list of options
      *
-     * @return MongoClient
+     * @param array|object $options
+     * @return \MongoDB\Client
      */
-    public function getClient()
+    private function createClientFromOptions($options)
     {
-        return $this->mongoClient;
+        $options = (array)$options;
+        $server = $options['client'];
+        $parts = explode('/', $server);
+        $dbName = isset($options['database']) ? $options['database'] : null;
+
+        if (count($parts) < 4 && $dbName) {
+            $server .= '/' . $dbName;
+        }
+
+        unset($options['client'], $options['database']);
+
+        return new Client($server, $options);
     }
 
     /**
      * Gets a collection
      *
      * @param string $name
-     * @param string $recordClass
-     * @return DB\Collection
-     * @codeCoverageIgnore
+     * @param array $options
+     * @return Mongo\DB\Collection
      */
-    public function selectCollection($name, $recordClass = null)
+    public function selectCollection($name, $options = [])
     {
-        return new Collection($this, $name, $recordClass);
+        return new Collection(
+            $this->getManager(),
+            $this->getDatabaseName(),
+            $name,
+            $options
+        );
     }
 
     /**
@@ -98,16 +101,14 @@ class DB extends \MongoDB implements Connection, Connection\Namable
     protected static function isMongoType($value)
     {
         return
-            $value instanceof \MongoBinData ||
-            $value instanceof \MongoDate ||
-            $value instanceof \MongoDBRef ||
-            $value instanceof \MongoInt32 ||
-            $value instanceof \MongoInt64 ||
-            $value instanceof \MongoId ||
-            $value instanceof \MongoMaxKey ||
-            $value instanceof \MongoMinKey ||
-            $value instanceof \MongoRegex ||
-            $value instanceof \MongoTimestamp;
+            $value instanceof BSON\Binary ||
+            $value instanceof BSON\UTCDateTime ||
+            $value instanceof BSON\Decimal128 ||
+            $value instanceof BSON\ObjectId ||
+            $value instanceof BSON\MaxKey ||
+            $value instanceof BSON\MinKey ||
+            $value instanceof BSON\Regex ||
+            $value instanceof BSON\Timestamp;
     }
 
 
@@ -121,16 +122,18 @@ class DB extends \MongoDB implements Connection, Connection\Namable
      */
     public static function toMongoType($value, $escapeKeys = false)
     {
+        // return true;
+
         if (static::isMongoType($value)) {
             return $value;
         }
 
         if ($value instanceof \DateTime) {
-            return new \MongoDate($value->getTimestamp());
+            return new BSON\UTCDateTime($value->getTimestamp() * 1000);
         }
 
         if ($value instanceof Blob) {
-            return new \MongoBinData($value, \MongoBinData::GENERIC);
+            return new BSON\Binary($value, BSON\Binary::TYPE_GENERIC);
         }
 
         if ($value instanceof Entity\Identifiable) {
@@ -147,7 +150,7 @@ class DB extends \MongoDB implements Connection, Connection\Namable
         }
 
         if (is_object($value) && !$value instanceof \stdClass) {
-            throw new \MongoException("Don't know how to cast a " . get_class($value) . " object to a mongo type");
+            throw new \MongoDB\Exception\InvalidArgumentException("Don't know how to cast a " . get_class($value) . " object to a mongo type");
         }
 
         if (is_array($value) || $value instanceof \stdClass) {
@@ -191,12 +194,12 @@ class DB extends \MongoDB implements Connection, Connection\Namable
             return !$isNumeric ? (object)$out : $out;
         }
 
-        if ($value instanceof \MongoDate) {
-            return \DateTime::createFromFormat('U', $value->sec);
+        if ($value instanceof BSON\UTCDateTime) {
+            return $value->toDateTime();
         }
 
-        if ($value instanceof \MongoBinData) {
-            return new Blob($value->bin);
+        if ($value instanceof BSON\Binary) {
+            return new Blob($value->getData());
         }
 
         return $value;
