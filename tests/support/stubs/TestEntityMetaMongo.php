@@ -18,7 +18,7 @@ class TestEntityMetaMongo implements Introspection, Entity, Identifiable
 
     /**
      * @var string
-     * @dbFieldType \MongoId
+     * @dbFieldType \MongoDB\BSON\ObjectId
      **/
     public $id;
 }

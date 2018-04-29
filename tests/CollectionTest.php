@@ -513,4 +513,101 @@ class CollectionTest extends TestHelper
         $result = $collection->findOne($filter, $options);
         $this->assertSame($values, $result);
     }
+
+    /**
+     * Provide data for testing 'useResultId' method, if single id is returned
+     *
+     * @return array
+     */
+    public function useResultIdSingleProvider()
+    {
+        return [
+            [['foo' => 'bar'], $this->createMock(\MongoDB\InsertOneResult::class), 'getInsertedId'],
+            [['foo' => 'bar'], $this->createMock(\MongoDB\UpdateResult::class), 'getUpsertedId'],
+            [(object)['foo' => 'bar'], $this->createMock(\MongoDB\InsertOneResult::class), 'getInsertedId'],
+            [(object)['foo' => 'bar'], $this->createMock(\MongoDB\UpdateResult::class), 'getUpsertedId'],
+        ];
+    }
+
+    /**
+     * Test 'useResultId' method, if single id is returned
+     *
+     * @dataProvider useResultIdSingleProvider
+     */
+    public function testUseResultIdSingle($document, $queryResult, $method)
+    {
+        $collection = $this->createPartialMock(Collection::class, []);
+        $queryResult->expects($this->once())->method($method)->willReturn('a');
+
+        $collection->useResultId($document, '_idCustom', $queryResult);
+
+        $document = (array)$document;
+        $this->assertSame('a', $document['_idCustom']);
+    }
+
+    /**
+     * Provide data for testing 'useResultId' method, if multiple ids are returned
+     *
+     * @return array
+     */
+    public function useResultIdMultipleProvider()
+    {
+        return [
+            [[['foo' => 'bar'], ['zoo' => 'baz']], $this->createMock(\MongoDB\InsertManyResult::class), 'getInsertedIds'],
+            [[['foo' => 'bar'], ['zoo' => 'baz']], $this->createMock(\MongoDB\UpdateResult::class), 'getUpsertedId'],
+            [[(object)['foo' => 'bar'], (object)['zoo' => 'baz']], $this->createMock(\MongoDB\InsertManyResult::class), 'getInsertedIds'],
+            [[(object)['foo' => 'bar'], (object)['zoo' => 'baz']], $this->createMock(\MongoDB\UpdateResult::class), 'getUpsertedId'],
+        ];
+    }
+
+    /**
+     * Test 'useResultId' method, if multiple ids are returned
+     *
+     * @dataProvider useResultIdMultipleProvider
+     */
+    public function testUseResultIdMultiple($documents, $queryResult, $method)
+    {
+        $collection = $this->createPartialMock(Collection::class, []);
+        $queryResult->expects($this->once())->method($method)->willReturn(['a', 'b']);
+
+        $collection->useResultId($documents, '_idCustom', $queryResult);
+
+        $documents[0] = (array)$documents[0];
+        $documents[1] = (array)$documents[1];
+
+        $this->assertSame('a', $documents[0]['_idCustom']);
+        $this->assertSame('b', $documents[1]['_idCustom']);
+    }
+
+    /**
+     * Provide data for testing 'useResultId' method, if no id is returned
+     *
+     * @return array
+     */
+    public function useResultIdEmptyProvider()
+    {
+        return [
+            [null],
+            [[]]
+        ];
+    }
+
+    /**
+     * Test 'useResultId' method, if no id is returned
+     *
+     * @dataProvider useResultIdEmptyProvider
+     */
+    public function testUseResultIdEmpty($id)
+    {
+        $document = ['foo' => 'bar'];
+
+        $queryResult = $this->createMock(\MongoDB\UpdateResult::class);
+        $queryResult->expects($this->once())->method('getUpsertedId')->willReturn($id);
+
+        $collection = $this->createPartialMock(Collection::class, []);
+
+        $collection->useResultId($document, '_idCustom', $queryResult);
+
+        $this->assertEquals(['foo' => 'bar'], $document);
+    }
 }

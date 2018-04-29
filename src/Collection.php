@@ -174,6 +174,54 @@ class Collection extends \MongoDB\Collection
     }
 
     /**
+     * Use result id for processed document
+     *
+     * @param array|object $doc
+     * @param string       $idName       Name of document id property
+     * @param object       $queryResult
+     */
+    public function useResultId(&$doc, $idName, $queryResult)
+    {
+        $id = null;
+
+        if ($queryResult instanceof \MongoDB\InsertManyResult) {
+            $id = $queryResult->getInsertedIds();
+        } else if ($queryResult instanceof \MongoDB\UpdateResult) {
+            $id = $queryResult->getUpsertedId();
+        } else if ($queryResult instanceof \MongoDB\InsertOneResult) {
+            $id = $queryResult->getInsertedId();
+        }
+
+        if (is_array($id)) {
+            foreach ($id as $i => $oneId) {
+                $this->setDocId($doc[$i], $idName, $oneId);
+            }
+        } else {
+            $this->setDocId($doc, $idName, $id);
+        }
+    }
+
+    /**
+     * Update the identifier
+     *
+     * @param array|object           $doc
+     * @param string                 $idName       Name of document id property
+     * @param MongoDB\BSON\ObjectId  $id
+     */
+    protected function setDocId(&$doc, $idName, $id)
+    {
+        if (!$id) {
+            return;
+        }
+
+        if (is_array($doc)) {
+            $doc[$idName] = $id;
+        } else {
+            $doc->$idName = $id;
+        }
+    }
+
+    /**
      * Create filter for replacing document
      *
      * @param array|object $values

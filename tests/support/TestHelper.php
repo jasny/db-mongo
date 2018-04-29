@@ -32,7 +32,7 @@ abstract class TestHelper extends \PHPUnit_Framework_TestCase
      * @param string $property
      * @return mixed
      */
-    protected function getPrivatePropery($object, $property)
+    protected function getPrivateProperty($object, $property)
     {
         if (!is_object($object)) {
             throw new \InvalidArgumentException("Expected an object, got a " . gettype($object));
