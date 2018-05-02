@@ -5,7 +5,8 @@ namespace Jasny\DB\Mongo\Document;
 use Jasny\DB\Mongo\TestEntityLazy,
     Jasny\DB\Mongo\TestEntityLazyComplexId,
     Jasny\DB\Mongo\TestEntityLazySimpleId,
-    Jasny\DB\Mongo\TestHelper;
+    Jasny\DB\Mongo\TestHelper,
+    MongoDB\BSON\ObjectId;
 
 /**
  * @covers Jasny\DB\Mongo\Document\LazyLoading\Implementation
@@ -29,7 +30,7 @@ class ImplementationTest extends TestHelper
      */
     public function test()
     {
-        $id = $this->createMock(\MongoId::class);
+        $id = new ObjectId();
         $result = TestEntityLazySimpleId::lazyload($id);
 
         $this->assertInstanceOf(TestEntityLazySimpleId::class, $result);
@@ -43,7 +44,7 @@ class ImplementationTest extends TestHelper
      */
     public function testLazyloadIdentifiableException()
     {
-        $id = $this->createMock(\MongoId::class);
+        $id = new ObjectId();
 
         $result = TestEntityLazy::lazyload($id);
     }
@@ -56,7 +57,7 @@ class ImplementationTest extends TestHelper
      */
     public function testLazyloadComplexIdException()
     {
-        $id = $this->createMock(\MongoId::class);
+        $id = new ObjectId();
 
         $result = TestEntityLazyComplexId::lazyload($id);
     }
