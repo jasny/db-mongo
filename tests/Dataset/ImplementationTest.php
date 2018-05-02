@@ -63,7 +63,7 @@ class ImplementationTest extends TestHelper
         TestDocumentBasic::$collection = 'test_collection';
 
         $db = $this->createMock(DB::class);
-        $db->expects($this->once())->method('selectCollection')->with('test_collection', TestDocumentBasic::class)->willReturn('foo_result');
+        $db->expects($this->once())->method('selectCollection')->with('test_collection', ['documentClass' => TestDocumentBasic::class])->willReturn('foo_result');
 
         TestDocumentBasic::$connectionMock = $db;
         $document = new TestDocumentBasic();
@@ -130,7 +130,7 @@ class ImplementationTest extends TestHelper
      */
     public function testIdToFilterMongo()
     {
-        $id = $this->createMock(\MongoId::class);
+        $id = new \MongoDB\BSON\ObjectId();
 
         $document = new TestDocumentBasic();
         $result = $this->callProtectedMethod($document, 'idToFilter', [$id]);
@@ -172,7 +172,7 @@ class ImplementationTest extends TestHelper
      */
     public function testIdToFilterNotIdentifiableMongo()
     {
-        $id = $this->createMock(\MongoId::class);
+        $id = new \MongoDB\BSON\ObjectId();
 
         $document = new TestDocumentLazy();
         $result = $this->callProtectedMethod($document, 'idToFilter', [$id]);
@@ -229,7 +229,7 @@ class ImplementationTest extends TestHelper
         $query = $id;
 
         $collection = $this->initCollection();
-        $collection->expects($this->once())->method('count')->with($query, 1)->willReturn(1);
+        $collection->expects($this->once())->method('count')->with($query)->willReturn(1);
 
         $result = TestDocumentBasic::exists($id);
 
@@ -264,9 +264,30 @@ class ImplementationTest extends TestHelper
     public function fetchAllProvider()
     {
         return [
-            [['^foo_field'], ['foo_field' => DB::DESCENDING], [3, 1], 3, 1],
-            [[], ['id' => DB::ASCENDING], 3, 3, null],
-            [['^id'], ['id' => DB::DESCENDING], null, null, null]
+            [
+                ['^foo_field'],
+                [3, 1],
+                [
+                    'sort' => ['foo_field' => DB::DESCENDING],
+                    'limit' => 3,
+                    'skip' => 1
+                ]
+            ],
+            [
+                [],
+                3,
+                [
+                    'sort' => ['id' => DB::ASCENDING],
+                    'limit' => 3
+                ]
+            ],
+            [
+                ['^id'],
+                null,
+                [
+                    'sort' => ['id' => DB::DESCENDING]
+                ]
+            ]
         ];
     }
 
@@ -275,7 +296,7 @@ class ImplementationTest extends TestHelper
      *
      * @dataProvider fetchAllProvider
      */
-    public function testFetchAll($sort, $sortQuery, $limit, $setLimit, $setSkip)
+    public function testFetchAll($sort, $limit, $findOpts)
     {
         $filter = ['foo' => 'bar'];
         $query = $filter;
@@ -283,17 +304,8 @@ class ImplementationTest extends TestHelper
         $cursor = $this->createMock(Cursor::class);
 
         $collection = $this->initCollection();
-        $collection->expects($this->once())->method('find')->with($query)->willReturn($cursor);
+        $collection->expects($this->once())->method('find')->with($query, $findOpts)->willReturn($cursor);
         $collection->expects($this->once())->method('count')->with($query);
-        $cursor->expects($this->once())->method('sort')->with($sortQuery);
-
-        if (isset($setLimit)) {
-            $cursor->expects($this->once())->method('limit')->with($setLimit);
-        }
-
-        if (isset($setSkip)) {
-            $cursor->expects($this->once())->method('skip')->with($setSkip);
-        }
 
         $entitySet = $this->initEntitySet();
 
@@ -307,7 +319,7 @@ class ImplementationTest extends TestHelper
      *
      * @dataProvider fetchAllProvider
      */
-    public function testFetchPairs($sort, $sortQuery, $limit, $setLimit, $setSkip)
+    public function testFetchPairs($sort, $limit, $findOpts)
     {
         $filter = ['foo' => 'bar'];
         $query = $filter;
@@ -315,17 +327,8 @@ class ImplementationTest extends TestHelper
         $cursor = $this->createMock(Cursor::class);
 
         $collection = $this->initCollection();
-        $collection->expects($this->once())->method('find')->with($query)->willReturn($cursor);
+        $collection->expects($this->once())->method('find')->with($query, $findOpts)->willReturn($cursor);
         $collection->expects($this->once())->method('count')->with($query);
-        $cursor->expects($this->once())->method('sort')->with($sortQuery);
-
-        if (isset($setLimit)) {
-            $cursor->expects($this->once())->method('limit')->with($setLimit);
-        }
-
-        if (isset($setSkip)) {
-            $cursor->expects($this->once())->method('skip')->with($setSkip);
-        }
 
         $entitySet = $this->initEntitySet();
         $entitySet[0]->id = 'a';
@@ -367,7 +370,7 @@ class ImplementationTest extends TestHelper
         $collection = $this->createMock(Collection::class);
 
         $db = $this->createMock(DB::class);
-        $db->expects($this->once())->method('selectCollection')->with('test_collection', TestDocumentBasic::class)->willReturn($collection);
+        $db->expects($this->once())->method('selectCollection')->with('test_collection',['documentClass' => TestDocumentBasic::class])->willReturn($collection);
 
         TestDocumentBasic::$connectionMock = $db;
 
