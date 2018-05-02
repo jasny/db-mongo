@@ -1,6 +1,6 @@
 <?php
 
-namespace Jasny\DB\Mongo\Document;
+namespace Jasny\DB\Mongo\Document\LazyLoading;
 
 use Jasny\DB\Mongo\TestEntityLazy,
     Jasny\DB\Mongo\TestEntityLazyComplexId,
