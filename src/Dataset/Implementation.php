@@ -184,7 +184,7 @@ trait Implementation
         // Limit / skip
         list($limit, $skip) = (array)$limit + [null, null];
 
-        // Query
+        // Find options
         $findOpts = [];
         if ($sort) {
             $findOpts['sort'] = $sort;
@@ -196,6 +196,7 @@ trait Implementation
             $findOpts['skip'] = $skip;
         }
 
+        // Query
         $query = static::filterToQuery($filter, $opts);
         $cursor = $collection->find($query, $findOpts);
 
