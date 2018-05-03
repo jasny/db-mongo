@@ -107,7 +107,7 @@ class FlagImplementationTest extends TestHelper
         $query = ['_id' => 'a', '_deleted' => null];
 
         $collection = $this->createMock(Collection::class);
-        $collection->expects($this->once())->method('update')->with($query, ['$set' => ['_deleted' => true]])->willReturn(true);
+        $collection->expects($this->once())->method('updateOne')->with($query, ['$set' => ['_deleted' => true]])->willReturn(true);
 
         $entity = $this->createPartialMock(TestEntityMeta::class, ['getId']);
         $entity->expects($this->once())->method('getId')->willReturn('a');
@@ -126,7 +126,7 @@ class FlagImplementationTest extends TestHelper
         $query = ['_id' => 'a', '_deleted' => true];
 
         $collection = $this->createMock(Collection::class);
-        $collection->expects($this->once())->method('update')->with($query, ['$unset' => ['_deleted' => 1]])->willReturn(true);
+        $collection->expects($this->once())->method('updateOne')->with($query, ['$unset' => ['_deleted' => 1]])->willReturn(true);
 
         $entity = $this->createPartialMock(TestEntityMeta::class, ['getId']);
         $entity->expects($this->once())->method('getId')->willReturn('a');
@@ -146,7 +146,7 @@ class FlagImplementationTest extends TestHelper
 
         $collection = $this->createMock(Collection::class);
         $collection->expects($this->once())->method('count')->with($query)->willReturn(1);
-        $collection->expects($this->once())->method('remove')->with($query)->willReturn(true);
+        $collection->expects($this->once())->method('deleteOne')->with($query)->willReturn(true);
 
         $entity = $this->createPartialMock(TestEntityMeta::class, ['getId']);
         $entity->method('getId')->willReturn('a');
@@ -183,7 +183,7 @@ class FlagImplementationTest extends TestHelper
     public function testPurgeAll()
     {
         $collection = $this->createMock(Collection::class);
-        $collection->expects($this->once())->method('remove')->with(['_deleted' => true])->willReturn(true);
+        $collection->expects($this->once())->method('deleteMany')->with(['_deleted' => true])->willReturn(true);
 
         TestDataMapperSoftDeletion::$collectionMock = $collection;
         $result = TestDataMapperSoftDeletion::purgeAll();
