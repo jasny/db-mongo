@@ -61,14 +61,14 @@ trait PoormansImplementation
             $field = $searchFields[0];
 
             foreach ($words as $i => $word) {
-                $search[$i][$field] = new \MongoRegex('/' . $word . '/i');
+                $search[$i][$field] = new \MongoDB\BSON\Regex($word, 'i');
             }
         } else {
             foreach ($words as $i => $word) {
                 $fields = [];
 
                 foreach ($searchFields as $j => $field) {
-                    $fields[$j][$field] = new \MongoRegex('/' . $word . '/i');
+                    $fields[$j][$field] = new \MongoDB\BSON\Regex($word, 'i');
                 }
                 $search[$i]['$or'] = $fields;
             }
@@ -91,34 +91,35 @@ trait PoormansImplementation
     {
         $collection = static::getCollection();
 
-        // Query
-        $query = static::searchQuery($terms) + static::filterToQuery((array)$filter, $opts);
-        $cursor = $collection->find($query);
-
-        $totalFn = function() use ($collection, $query) {
-            return $collection->count($query);
-        };
-
         // Sort
         if (is_a(get_called_class(), Sorted::class, true)) {
             $sort = (array)$sort + static::getDefaultSorting();
         }
-        if (isset($sort)) {
-            $querySort = DB::sortToQuery($sort);
-        }
-        if (!empty($querySort)) {
-            $cursor->sort($querySort);
-        }
+
+        $sort = DB::sortToQuery($sort);
 
         // Limit / skip
         list($limit, $skip) = (array)$limit + [null, null];
 
+        // Find options
+        $findOpts = [];
+        if ($sort) {
+            $findOpts['sort'] = $sort;
+        }
         if (isset($limit)) {
-            $cursor->limit($limit);
+            $findOpts['limit'] = $limit;
         }
         if (isset($skip)) {
-            $cursor->skip($skip);
+            $findOpts['skip'] = $skip;
         }
+
+        // Query
+        $query = static::searchQuery($terms) + static::filterToQuery((array)$filter, $opts);
+        $cursor = $collection->find($query, $findOpts);
+
+        $totalFn = function() use ($collection, $query) {
+            return $collection->count($query);
+        };
 
         $class = self::getDocumentClass();
         return $class::entitySet($cursor, $totalFn);
