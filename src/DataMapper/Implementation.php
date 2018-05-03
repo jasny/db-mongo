@@ -79,7 +79,11 @@ trait Implementation
                 . "First expand, than edit, than save.");
         }
 
-        static::getCollection()->save($document);
+        $collection = static::getCollection();
+        $idName = $document->getIdProperty();
+
+        $result = $collection->save($document);
+        $collection->useResultId($document, $idName, $result);
     }
 
     /**
@@ -95,6 +99,6 @@ trait Implementation
 
         $filter = [$document->getIdProperty() => $document->getId()];
 
-        static::getCollection()->remove($filter);
+        static::getCollection()->deleteOne($filter);
     }
 }

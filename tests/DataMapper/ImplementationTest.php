@@ -10,6 +10,7 @@ use Jasny\DB\Mongo\DB,
     Jasny\DB\Entity\LazyLoading,
     Jasny\DB\Mongo\TestDataMapper,
     Jasny\DB\Mongo\TestEntityDataMapper,
+    Jasny\DB\Mongo\TestEntityLazySimpleId,
     Jasny\DB\Mongo\TestEntityMeta,
     Jasny\DB\Mongo\TestEntityData;
 
@@ -104,13 +105,16 @@ class ImplementationTest extends TestHelper
      */
     public function testSave()
     {
-        $entity = $this->createMock(LazyLoading::class);
+        $saveResult = 'foo_result';
+
+        $entity = $this->createPartialMock(TestEntityLazySimpleId::class, ['isGhost']);
         $entity->expects($this->once())->method('isGhost')->willReturn(false);
 
         $collection = $this->createMock(Collection::class);
         TestDataMapper::$collectionMock = $collection;
 
-        $collection->expects($this->once())->method('save')->with($entity);
+        $collection->expects($this->once())->method('save')->with($entity)->willReturn($saveResult);
+        $collection->expects($this->once())->method('useResultId')->with($entity, 'id', $saveResult);
 
         TestDataMapper::save($entity);
     }
@@ -139,7 +143,7 @@ class ImplementationTest extends TestHelper
         $collection = $this->createMock(Collection::class);
         TestDataMapper::$collectionMock = $collection;
 
-        $collection->expects($this->once())->method('remove')->with(['id' => 'a']);
+        $collection->expects($this->once())->method('deleteOne')->with(['id' => 'a']);
 
         TestDataMapper::delete($entity);
     }
