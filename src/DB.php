@@ -17,25 +17,28 @@ use Jasny\DB\Connection,
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.com/db-mongo
  */
-class DB extends \MongoDB\Database implements Connection, Connection\Namable
+class DB extends \MongoDB\Database
 {
-    use Connection\Namable\Implemention;
-
     const ASCENDING = 1;
     const DESCENDING = -1;
 
     /**
      * @param \MongoDB\Driver\Manager|string|array $client  Manager or settings
-     * @param string                                        $name
-     * @param array $options
+     * @param string                               $name    Database name
+     * @param array                                $options
      * @codeCoverageIgnore
      */
-    public function __construct($manager, $name = null, $options = [])
+    public function __construct($manager, $name, $options = [])
     {
         if (is_array($manager) || $manager instanceof \stdClass) {
-            $client = $this->createManagerFromOptions($manager);
-            $manager = $client->getManager();
-        } else if (is_string($manager)) {
+            $manager = $this->getOptionsAsString($manager);
+        }
+
+        if (is_string($manager)) {
+            if (!$name) {
+                $name = $this->getDbNameFromUri($manager);
+            }
+
             $manager = new Manager($manager);
         }
 
@@ -48,20 +51,33 @@ class DB extends \MongoDB\Database implements Connection, Connection\Namable
      * @param array|object $options
      * @return \MongoDB\Client
      */
-    private function createClientFromOptions($options)
+    private function getOptionsAsString($options)
     {
         $options = (array)$options;
-        $server = $options['client'];
-        $parts = explode('/', $server);
+        $conn = $options['client'];
+        $parts = explode('/', $conn);
         $dbName = isset($options['database']) ? $options['database'] : null;
 
         if (count($parts) < 4 && $dbName) {
-            $server .= '/' . $dbName;
+            $conn .= '/' . $dbName;
         }
 
-        unset($options['client'], $options['database']);
+        return $conn;
+    }
 
-        return new Client($server, $options);
+    /**
+     * Get db name from options
+     *
+     * @param string $uri
+     * @return string|null
+     */
+    private function getDbNameFromUri($uri)
+    {
+        $parts = parse_url($uri);
+        $path = isset($parts['path']) ? $parts['path'] : '';
+        $dbName = trim($path, '/');
+
+        return $dbName ?: null;
     }
 
     /**

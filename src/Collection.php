@@ -38,6 +38,13 @@ class Collection extends \MongoDB\Collection
             throw new \LogicException("Class $documentClass is not a " . Entity::class);
         }
 
+        if (!isset($options['typeMap'])) {
+            $options['typeMap'] = [
+                'root' => 'array',
+                'document' => 'array'
+            ];
+        }
+
         $this->documentClass = $documentClass;
         parent::__construct($manager, $dbName, $name, $options);
     }
@@ -106,7 +113,7 @@ class Collection extends \MongoDB\Collection
      * @param array|object $filter
      * @param array|object $doc      Array or object to save.
      * @param array        $options  Options for the save.
-     * @return array|boolean
+     * @return MongoDB\UpdateResult
      */
     public function replaceOne($filter, $doc, array $options = [])
     {
@@ -122,7 +129,7 @@ class Collection extends \MongoDB\Collection
      *
      * @param array|object $doc      Array or object to save.
      * @param array        $options  Options for the save.
-     * @return array|boolean
+     * @return MongoDB\InsertOneResult
      */
     public function insertOne($doc, array $options = [])
     {
@@ -138,7 +145,7 @@ class Collection extends \MongoDB\Collection
      *
      * @param array $docs
      * @param array $options
-     * @return mixed
+     * @return MongoDB\InsertManyResult
      */
     public function insertMany(array $docs, array $options = [])
     {
@@ -159,7 +166,7 @@ class Collection extends \MongoDB\Collection
      * @param array        $options  Options for the save.
      * @return array|boolean
      */
-    public function save($doc, array $options = [])
+    public function save(&$doc, array $options = [])
     {
         $typeCast = $this->getTypeCaster();
         $values = $typeCast->toMongoType($doc, true);
@@ -167,10 +174,14 @@ class Collection extends \MongoDB\Collection
 
         if ($filter) {
             $options = array_merge(['upsert' => true], $options);
-            return $this->replaceOne($filter, $doc, $options);
+            $result = $this->replaceOne($filter, $doc, $options);
+        } else {
+            $result = $this->insertOne($doc, $options);
         }
 
-        return $this->insertOne($doc, $options);
+        $this->useResultId($doc, '_id', $result);
+
+        return $result;
     }
 
     /**
