@@ -22,13 +22,16 @@ Jasny DB Mongo is not a DB abstraction layer, it **extends** the Mongo classes (
 methods are available and will work as described in the PHP manual.
 
 ### Installation
+
 Use [composer](https://getcomposer.org/) to install Jasny Mongo DB.
 
-    php composer.php require jasny/db-mongo '~2.0'
+php composer.php require jasny/db-mongo '~2.0'
 
 ### Usage
 
 It can be used in the same way as MongoDB extension, with a few improvements.
+
+---
 
 #### Init connection
 
@@ -36,12 +39,12 @@ When creating Database instance, we can use not only `MongoDB\Driver\Manager` as
 
 ```
 
-    $options = [
-        'client' => 'mongodb://localhost:27017',
-        'database' => 'test'
-    ];
+$options = [
+    'client' => 'mongodb://localhost:27017',
+    'database' => 'test'
+];
 
-    $db = new DB($options, '');
+$db = new DB($options, '');
 
 ```
 
@@ -49,12 +52,14 @@ or
 
 ```
 
-    $uri = 'mongodb://user:password@test-host:27017/test-db?foo=bar';
-    $db = new DB($uri, '');
+$uri = 'mongodb://user:password@test-host:27017/test-db?foo=bar';
+$db = new DB($uri, '');
 
 ```
 
 Or database name can be passed as second parameter, like it is required in `MongoDB\Database`.
+
+---
 
 #### Saving items
 
@@ -64,10 +69,10 @@ So you can do:
 
 ```
 
-    $collection = $db->test_collection;
-    $document = ['foo' => 'bar'];
+$collection = $db->test_collection;
+$document = ['foo' => 'bar'];
 
-    $collection->save($document);
+$collection->save($document);
 
 ```
 
@@ -79,12 +84,14 @@ To assign created id to document, you can do:
 
 ```
 
-    $result = $collection->insertOne($document);
-    $collection->useResultId($document, '_id', $result);
+$result = $collection->insertOne($document);
+$collection->useResultId($document, '_id', $result);
 
 ```
 
 That is automatically performed in some of our library classes, like `Jasny\DB\Mongo\DataMapper` or `Jasny\DB\Mongo\Document`.
+
+---
 
 #### Fetching from db
 
@@ -94,7 +101,7 @@ So the following check won't work:
 
 ```
 
-    $cursor instanceof MongoDB\Driver\Cursor; // false
+$cursor instanceof MongoDB\Driver\Cursor; // false
 
 ```
 
@@ -102,11 +109,13 @@ But you still can do everything else:
 
 ````
 
-    $asArray = $cursor->asArray();
+$asArray = $cursor->asArray();
 
 ````
 
 or performing `foreach` iteration over cursor.
+
+---
 
 #### Cast fetched records
 
