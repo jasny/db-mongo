@@ -37,7 +37,7 @@ It can be used in the same way as MongoDB extension, with a few improvements.
 
 ---
 
-#### Init connection
+#### **Init connection**
 
 When creating Database instance, we can use not only `MongoDB\Driver\Manager` as first parameter, but also an array of options, or even a uri connection string:
 
@@ -65,7 +65,7 @@ Or database name can be passed as second parameter, like it is required in `Mong
 
 ---
 
-#### Saving items
+#### **Saving items**
 
 You can use collection save methods, defined in `MongoDB\Collection`. Unlike in old [PHP Mongo](https://php.net/manual/en/book.mongo.php) extension, `save` method is removed from new extension. Our library implements it in `Jasny\DB\Mongo\Collection` class, as it is very handy.
 
@@ -97,7 +97,7 @@ That is automatically performed in some of our library classes, like `Jasny\DB\M
 
 ---
 
-#### Fetching from db
+#### **Fetching from db**
 
 When using `$cursor = $collection->find($filter)` for fetching records, an instance of `Jasny\DB\Mongo\Cursor` is returned. It does not extend `MongoDB\Driver\Cursor` class, as all `MongoDB\Driver` classes are final. Instead it incapsulates it, implementing magical calling of all it's methods.
 
@@ -121,7 +121,7 @@ or performing `foreach` iteration over cursor.
 
 ---
 
-#### Cast fetched records
+#### **Cast fetched records**
 
 There is a base class we use for items, that are stored in DB. That's `Jasny\DB\Entity`, that is defined in [Jasny DB](https://github.com/jasny/db) repository.
 
