@@ -35,8 +35,6 @@ php composer.php require jasny/db-mongo '~2.0'
 
 It can be used in the same way as MongoDB extension, with a few improvements.
 
----
-
 #### **Init connection**
 
 When creating Database instance, we can use not only `MongoDB\Driver\Manager` as first parameter, but also an array of options, or even a uri connection string:
@@ -62,8 +60,6 @@ $db = new DB($uri, '');
 ```
 
 Or database name can be passed as second parameter, like it is required in `MongoDB\Database`.
-
----
 
 #### **Saving items**
 
@@ -95,8 +91,6 @@ $collection->useResultId($document, '_id', $result);
 
 That is automatically performed in some of our library classes, like `Jasny\DB\Mongo\DataMapper` or `Jasny\DB\Mongo\Document`.
 
----
-
 #### **Fetching from db**
 
 When using `$cursor = $collection->find($filter)` for fetching records, an instance of `Jasny\DB\Mongo\Cursor` is returned. It does not extend `MongoDB\Driver\Cursor` class, as all `MongoDB\Driver` classes are final. Instead it incapsulates it, implementing magical calling of all it's methods.
@@ -118,8 +112,6 @@ $asArray = $cursor->asArray();
 ````
 
 or performing `foreach` iteration over cursor.
-
----
 
 #### **Cast fetched records**
 
