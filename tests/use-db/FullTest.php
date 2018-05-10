@@ -6,6 +6,7 @@ use Jasny\DB\Blob,
     Jasny\DB\Entity,
     Jasny\DB\Entity\Identifiable,
     Jasny\DB\EntitySet,
+    Jasny\DB\Mongo\TestEntity,
     MongoDB\BSON\ObjectId;
 
 /**
@@ -14,8 +15,23 @@ use Jasny\DB\Blob,
  */
 class FullTest extends TestHelper
 {
+    /**
+     * Connection to db
+     * @var Jasny\DB\Mongo\DB
+     */
     public static $db;
+
+    /**
+     * Collection instance with no casting to Entity
+     * @var Jasny\DB\Mongo\Collection
+     */
     public static $collection;
+
+    /**
+     * Collection instance with casting to Entity
+     * @var Jasny\DB\Mongo\Collection
+     */
+    public static $collectionEntity;
 
     /**
      * Init db connection
@@ -29,6 +45,7 @@ class FullTest extends TestHelper
 
         static::$db = new DB($options, '');
         static::$collection = static::$db->test_collection;
+        static::$collectionEntity = static::$db->selectCollection('test_collection', ['documentClass' => TestEntity::class]);
     }
 
     /**
@@ -238,6 +255,65 @@ class FullTest extends TestHelper
         $this->assertEquals((array)$docs[1], $asArray[1]);
         $this->assertCount(2, $asArray);
         $this->assertSame(3, $collection->count([]));
+    }
+
+    /**
+     * Test 'findOne' method for Entity instance
+     */
+    public function testFindOneEntity()
+    {
+        $collection = static::$collectionEntity;
+
+        $entity = $this->createPartialMock(TestEntity::class, []);
+        $entity->date = new \DateTime();
+        $entity->zoo = 'lion';
+
+        $result = $collection->insertOne($entity);
+        $collection->useResultId($entity, '_id', $result);
+
+        $this->assertInstanceOf(ObjectId::class, $entity->_id);
+
+        $fetched = $collection->findOne(['_id' => $entity->_id]);
+
+        $this->assertInstanceOf(TestEntity::class, $fetched);
+        $this->assertEquals($entity->date, $fetched->date);
+        $this->assertEquals($entity->zoo, $fetched->zoo);
+    }
+
+    /**
+     * Test 'find' method for Entity instances
+     */
+    public function testFindEntities()
+    {
+        $collection = static::$collectionEntity;
+
+        $entity1 = new TestEntity();
+        $entity1->date = new \DateTime('2017-08-15T15:52:01+00:00');
+        $entity1->zoo = 'lion';
+
+        $entity2 = new TestEntity();
+        $entity2->date = new \DateTime('2017-09-15T15:52:01+00:00');
+        $entity2->zoo = 'zebra';
+
+        $entity3 = new TestEntity();
+        $entity3->date = new \DateTime('2017-10-15T15:52:01+00:00');
+        $entity3->zoo = 'monkey';
+
+        $docs = [$entity1, $entity2, $entity3];
+
+        $result = $collection->insertMany($docs);
+        $collection->useResultId($docs, '_id', $result);
+
+        $ids = [];
+        foreach ($docs as &$item) {
+            $ids[] = $item->_id;
+            unset($item->_id);
+        }
+
+        $cursor = $collection->find(['_id' => ['$in' => $ids]]);
+        $asArray = $cursor->toArrayCast();
+
+        $this->assertEquals($docs, $asArray);
     }
 
     /**

@@ -107,3 +107,39 @@ But you still can do everything else:
 ````
 
 or performing `foreach` iteration over cursor.
+
+#### Cast fetched records
+
+There is a base class we use for items, that are stored in DB. That's `Jasny\DB\Entity`, that is defined in [Jasny DB](https://github.com/jasny/db) repository.
+
+Fetching db records using collection methods `find` and `findOne` can produce records of this class (or any of it subclasses you define).
+
+To make use of that, you should obtain collection instance in the following way:
+
+```
+
+$collection = $db->selectCollection('foo_collection', ['documentClass' => SomeEntity::class]);
+
+```
+
+Casting to `Entity` class is performed by our framework, without use of `MongoDB` `typeMap` functionality, because casting can be pretty complex.
+
+Than in the following case:
+
+```
+
+$record = $collection->findOne($filter);
+
+```
+
+`$record` is an instance of `Jasny\DB\Entity`.
+
+In the following case:
+
+```
+
+$cursor = $collection->find($filter);
+
+```
+
+to obtain casted records, you should either iterate over `$cursor` using `foreach`, or use `$cursor->toArrayCast()` method, implemented by our framework. If you use native `$cursor->toArray()` method, implemented by `MongoDB\Driver\Cursor`, records use casting defined in collection's `typeMap` option. By default we set this option to use casting to array.
