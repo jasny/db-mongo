@@ -11,7 +11,7 @@ Jasny DB Mongo adds OOP design patterns to PHP's [MongoDB extension](https://php
 * [Data mapper](#data-mapper)
 * [Indexing](#indexing)
 * [Metadata](#metadata)
-* [Type casting](#type casting)
+* [Type casting](#type-casting)
 * [Validation](#validation)
 * [Lazy loading](#lazy-loading)
 * [Soft deletion](#soft-deletion)
@@ -25,7 +25,11 @@ methods are available and will work as described in the PHP manual.
 
 Use [composer](https://getcomposer.org/) to install Jasny Mongo DB.
 
+```
+
 php composer.php require jasny/db-mongo '~2.0'
+
+```
 
 ### Usage
 
