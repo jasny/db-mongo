@@ -296,10 +296,11 @@ class CollectionTest extends TestHelper
 
         $typeCast = $this->createMock(DeepCast::class);
 
-        $collection = $this->createPartialMock(Collection::class, ['getTypeCaster', 'replaceOne', 'insertOne']);
+        $collection = $this->createPartialMock(Collection::class, ['getTypeCaster', 'replaceOne', 'insertOne', 'useResultId']);
         $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
         $typeCast->expects($this->once())->method('toMongoType')->with($document, true)->willReturn($values);
         $collection->expects($this->once())->method('replaceOne')->with($filter, $document, $useOptions)->willReturn($expected);
+        $collection->expects($this->once())->method('useResultId')->with($document, '_id', $expected);
         $collection->expects($this->never())->method('insertOne');
 
         $result = $collection->save($document, $options);
@@ -318,10 +319,11 @@ class CollectionTest extends TestHelper
 
         $typeCast = $this->createMock(DeepCast::class);
 
-        $collection = $this->createPartialMock(Collection::class, ['getTypeCaster', 'replaceOne', 'insertOne']);
+        $collection = $this->createPartialMock(Collection::class, ['getTypeCaster', 'replaceOne', 'insertOne', 'useResultId']);
         $collection->expects($this->once())->method('getTypeCaster')->willReturn($typeCast);
         $typeCast->expects($this->once())->method('toMongoType')->with($document, true)->willReturn($values);
         $collection->expects($this->once())->method('insertOne')->with($document, $options)->willReturn($expected);
+        $collection->expects($this->once())->method('useResultId')->with($document, '_id', $expected);
         $collection->expects($this->never())->method('replaceOne');
 
         $result = $collection->save($document, $options);

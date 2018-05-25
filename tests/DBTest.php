@@ -32,21 +32,53 @@ class DBTest extends TestHelper
     }
 
     /**
-     * Test '__construct' method
+     * Test 'getOptionsAsString' method
      *
      * @dataProvider createClientFromOptionsProvider
      */
-    public function testCreateClientFromOptions($options, $expectedUri)
+    public function testGetOptionsAsString($options, $expected)
     {
         $mock = $this->getMockBuilder(DB::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $result = $this->callProtectedMethod($mock, 'createClientFromOptions', [$options]);
-        $this->assertInstanceOf(Client::class, $result);
+        $result = $this->callProtectedMethod($mock, 'getOptionsAsString', [$options]);
+        $this->assertSame($expected, $result);
+    }
 
-        $uri = $this->getPrivateProperty($result, 'uri');
-        $this->assertSame($expectedUri, $uri);
+    /**
+     * Provide data for testing 'getDbNameFromUri' method
+     *
+     * @return array
+     */
+    public function getDbNameFromUriProvider()
+    {
+        return [
+            ['mongodb://test-host/test-db', 'test-db'],
+            ['mongodb://test-host/test-db?foo=bar', 'test-db'],
+            ['mongodb://test-host:27017/test-db', 'test-db'],
+            ['mongodb://test-host:27017/test-db?foo=bar', 'test-db'],
+            ['mongodb://test-host:27017/test-db?foo=bar', 'test-db'],
+            ['mongodb://user:password@test-host:27017/test-db?foo=bar', 'test-db'],
+            ['mongodb://test-host/', null],
+            ['mongodb://test-host', null],
+            ['mongodb://test-host/?foo=bar', null]
+        ];
+    }
+
+    /**
+     * Test 'getDbNameFromUri' method
+     *
+     * @dataProvider getDbNameFromUriProvider
+     */
+    public function testGetDbNameFromUri($uri, $expected)
+    {
+        $mock = $this->getMockBuilder(DB::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $result = $this->callProtectedMethod($mock, 'getDbNameFromUri', [$uri]);
+        $this->assertSame($expected, $result);
     }
 
     /**

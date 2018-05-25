@@ -60,7 +60,7 @@ class Cursor implements \IteratorAggregate
      */
     public function getIterator()
     {
-        $documentClass = isset($this->collection) ? $this->collection->getDocumentClass() : null;
+        $documentClass = $this->collection->getDocumentClass();
         $self = $this;
 
         $generator = function () use ($documentClass, $self) {
@@ -76,6 +76,27 @@ class Cursor implements \IteratorAggregate
         };
 
         return $generator();
+    }
+
+    /**
+     * Get all fetched items as array, with casting to `documentClass`, if it is set
+     *
+     * @return array
+     */
+    public function toArrayCast()
+    {
+        $documentClass = $this->collection->getDocumentClass();
+
+        if (!$documentClass) {
+            return $this->toArray();
+        }
+
+        $asArray = [];
+        foreach ($this as $item) {
+            $asArray[] = $item;
+        }
+
+        return $asArray;
     }
 
     /**

@@ -1,6 +1,6 @@
 <?php
 
-namespace Jasny\DB\Mongo\Document;
+namespace Jasny\DB\Mongo\Document\SoftDeletion;
 
 use Jasny\DB\Mongo\TestHelper,
     Jasny\DB\Mongo\TestDocumentSoftDeletion,
@@ -89,7 +89,7 @@ class FlagImplementationTest extends TestHelper
         $document->id = $id;
 
         $collection = $this->initCollection();
-        $collection->expects($this->once())->method('update')->with($query, ['$set' => ['_deleted' => true]]);
+        $collection->expects($this->once())->method('updateOne')->with($query, ['$set' => ['_deleted' => true]]);
 
         $result = $document->delete();
 
@@ -108,7 +108,7 @@ class FlagImplementationTest extends TestHelper
         $document->id = $id;
 
         $collection = $this->initCollection();
-        $collection->expects($this->once())->method('update')->with($query, ['$unset' => ['_deleted' => 1]]);
+        $collection->expects($this->once())->method('updateOne')->with($query, ['$unset' => ['_deleted' => 1]]);
 
         $result = $document->undelete();
 
@@ -128,7 +128,7 @@ class FlagImplementationTest extends TestHelper
         $document->id = $id;
 
         $collection = $this->initCollection();
-        $collection->expects($this->once())->method('remove')->with($query);
+        $collection->expects($this->once())->method('deleteOne')->with($query);
 
         $result = $document->purge();
 
@@ -147,7 +147,7 @@ class FlagImplementationTest extends TestHelper
         $document->expects($this->once())->method('isDeleted')->willReturn(false);
 
         $collection = $this->initCollection();
-        $collection->expects($this->never())->method('remove');
+        $collection->expects($this->never())->method('deleteOne');
 
         $document->purge();
     }
@@ -158,7 +158,7 @@ class FlagImplementationTest extends TestHelper
     public function testPurgeAll()
     {
         $collection = $this->initCollection();
-        $collection->expects($this->once())->method('remove')->with(['_deleted' => true]);
+        $collection->expects($this->once())->method('deleteMany')->with(['_deleted' => true]);
 
         TestDocumentSoftDeletion::purgeAll();
     }

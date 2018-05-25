@@ -64,7 +64,9 @@ trait Implementation
     protected static function getCollection()
     {
         $name = static::getCollectionName();
-        return static::getDB()->selectCollection($name , static::getDocumentClass());
+        $documentClass = static::getDocumentClass();
+
+        return static::getDB()->selectCollection($name, ['documentClass' => $documentClass]);
     }
 
     /**
@@ -94,7 +96,7 @@ trait Implementation
             return [$id::getIdProperty() => $id->getId()];
         }
 
-        if ($id instanceof \MongoId || is_scalar($id)) {
+        if ($id instanceof \MongoDB\BSON\ObjectId || is_scalar($id)) {
             $class = static::getDocumentClass();
 
             if (!is_a($class, Identifiable::class, true)) {
@@ -156,7 +158,7 @@ trait Implementation
         }
 
         $query = static::filterToQuery($filter, $opts);
-        return (boolean)static::getCollection()->count($query, 1);
+        return (boolean)static::getCollection()->count($query);
     }
 
     /**
@@ -172,34 +174,35 @@ trait Implementation
     {
         $collection = static::getCollection();
 
-        // Query
-        $query = static::filterToQuery($filter, $opts);
-        $cursor = $collection->find($query);
-
-        $totalFn = function() use ($collection, $query) {
-            return $collection->count($query);
-        };
-
         // Sort
         if (is_a(get_called_class(), Sorted::class, true)) {
             $sort = (array)$sort + static::getDefaultSorting();
         }
 
-        $querySort = DB::sortToQuery($sort);
-        if (!empty($querySort)) {
-            $cursor->sort($querySort);
-        }
+        $sort = DB::sortToQuery($sort);
 
         // Limit / skip
         list($limit, $skip) = (array)$limit + [null, null];
 
+        // Find options
+        $findOpts = [];
+        if ($sort) {
+            $findOpts['sort'] = $sort;
+        }
         if (isset($limit)) {
-            $cursor->limit($limit);
+            $findOpts['limit'] = $limit;
+        }
+        if (isset($skip)) {
+            $findOpts['skip'] = $skip;
         }
 
-        if (isset($skip)) {
-            $cursor->skip($skip);
-        }
+        // Query
+        $query = static::filterToQuery($filter, $opts);
+        $cursor = $collection->find($query, $findOpts);
+
+        $totalFn = function() use ($collection, $query) {
+            return $collection->count($query);
+        };
 
         // Return
         $class = static::getDocumentClass();

@@ -65,7 +65,7 @@ trait FlagImplementation
         $filter = static::idToFilter($document);
         $query = static::filterToQuery($filter);
 
-        return static::getCollection()->update($query, ['$set' => ['_deleted' => true]]);
+        return static::getCollection()->updateOne($query, ['$set' => ['_deleted' => true]]);
     }
 
     /**
@@ -79,7 +79,7 @@ trait FlagImplementation
         $filter = static::idToFilter($document);
         $query = static::filterToQuery($filter, ['from-trash']);
 
-        return static::getCollection()->update($query, ['$unset' => ['_deleted' => 1]]);
+        return static::getCollection()->updateOne($query, ['$unset' => ['_deleted' => 1]]);
     }
 
     /**
@@ -97,7 +97,7 @@ trait FlagImplementation
         $filter = static::idToFilter($document);
         $query = static::filterToQuery($filter, ['from-trash']);
 
-        return static::getCollection()->remove($query);
+        return static::getCollection()->deleteOne($query);
     }
 
     /**
@@ -108,6 +108,6 @@ trait FlagImplementation
      */
     public static function purgeAll(array $opts = [])
     {
-        return static::getCollection()->remove(['_deleted' => true]);
+        return static::getCollection()->deleteMany(['_deleted' => true]);
     }
 }

@@ -23,3 +23,4 @@ require_once "tests/support/stubs/TestDataMapper.php";
 require_once "tests/support/stubs/TestEntityDataMapper.php";
 require_once "tests/support/stubs/TestEntityData.php";
 require_once "tests/support/stubs/TestParentCallTestable.php";
+require_once "tests/support/stubs/TestDriverCursor.php";

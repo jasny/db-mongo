@@ -64,7 +64,7 @@ trait FlagImplementation
         $filter = static::idToFilter($this);
         $query = static::filterToQuery($filter);
 
-        static::getCollection()->update($query, ['$set' => ['_deleted' => true]]);
+        static::getCollection()->updateOne($query, ['$set' => ['_deleted' => true]]);
         return $this;
     }
 
@@ -79,7 +79,7 @@ trait FlagImplementation
         $filter = static::idToFilter($this);
         $query = static::filterToQuery($filter, array_merge($opts, ['from-trash']));
 
-        static::getCollection()->update($query, ['$unset' => ['_deleted' => 1]]);
+        static::getCollection()->updateOne($query, ['$unset' => ['_deleted' => 1]]);
         return $this;
     }
 
@@ -98,7 +98,7 @@ trait FlagImplementation
         $filter = static::idToFilter($this);
         $query = static::filterToQuery($filter, array_merge($opts, ['from-trash']));
 
-        static::getCollection()->remove($query);
+        static::getCollection()->deleteOne($query);
         return $this;
     }
 
@@ -109,6 +109,6 @@ trait FlagImplementation
      */
     public static function purgeAll(array $opts = [])
     {
-        static::getCollection()->remove(['_deleted' => true]);
+        static::getCollection()->deleteMany(['_deleted' => true]);
     }
 }
