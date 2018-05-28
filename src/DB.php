@@ -17,7 +17,7 @@ use Jasny\DB\Connection,
  * @license https://raw.github.com/jasny/db-mongo/master/LICENSE MIT
  * @link    https://jasny.github.com/db-mongo
  */
-class DB extends \MongoDB\Database
+class DB extends \MongoDB\Database implements Connection
 {
     const ASCENDING = 1;
     const DESCENDING = -1;
@@ -28,7 +28,7 @@ class DB extends \MongoDB\Database
      * @param array                                $options
      * @codeCoverageIgnore
      */
-    public function __construct($manager, $name, $options = [])
+    public function __construct($manager, $name = null, $options = [])
     {
         if (is_array($manager) || $manager instanceof \stdClass) {
             $manager = $this->getOptionsAsString($manager);
