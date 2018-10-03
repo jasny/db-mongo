@@ -19,7 +19,11 @@
     "require": {
         "php": ">=7.1.0",
         "ext-mongodb": "^1.4.0",
-        "jasny/db": "v3.x-dev as 3.0.0",
+        "cypresslab/php-curry": "^0.5.0",
+        "ipl/iterable": "dev-master",
+        "jasny/db": "v3.x-dev",
+        "jasny/entity": "dev-master",
+        "jasny/php-functions": "dev-master as 4.2.0",
         "mongodb/mongodb": "^1.3"
     },
     "require-dev": {
@@ -37,12 +41,9 @@
     },
     "scripts": {
         "test": [
+            "phpstan analyse",
             "phpunit",
-            "phpcs -p src",
-            "phpstan analyse"
-        ],
-        "post-create-project-cmd": [
-            "bash init.sh && rm init.sh"
+            "phpcs -p src"
         ]
     },
     "config": {
