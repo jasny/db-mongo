@@ -4,53 +4,80 @@ declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\QueryBuilder;
 
-use Jasny\IteratorPipeline\Pipeline;
-use function Jasny\str_starts_with;
+use Improved\IteratorPipeline\Pipeline;
 
 /**
- * A MongoDB query as object
+ * Accumulator for MongoDB query builder.
+ * Only for 'filter' part of find, update and delete queries.
  */
 class Query
 {
     /**
-     * @var array
+     * @var array<string, mixed>
+     */
+    protected $options;
+
+    /**
+     * @var array<string, array>
      */
     protected $conditions = [];
 
+
     /**
-     * Add condition to the query
+     * Query constructor.
+     *
+     * @param array<string, mixed> $options
+     */
+    public function __construct(array $options = [])
+    {
+        $this->options = $options;
+    }
+
+
+    /**
+     * Set MongoDB specific option
+     *
+     * @param string $name
+     * @param mixed $value
+     */
+    public function setOption(string $name, $value)
+    {
+        $this->options[$name] = $value;
+    }
+
+    /**
+     * Add a condition to the query
      *
      * @param array $condition
+     * @return void
      */
-    public function add(array $condition)
+    public function add(array $condition): void
     {
         $this->conditions[] = $condition;
     }
 
+
     /**
-     * Does query has any logic operators
+     * Get MongoDB query options.
      *
-     * @return bool
+     * @return array
      */
-    protected function hasLogicOperators(): bool
+    public function getOptions(): array
     {
-        return Pipeline::with($this->conditions)
-            ->flatten()
-            ->keys()
-            ->hasAny(function($key) {
-                return str_starts_with($key, '$');
-            });
+        return $this->options;
     }
 
     /**
-     * Cast the query to an array
+     * Get MongoDB query filter.
      *
      * @return array
      */
     public function toArray(): array
     {
-        return $this->hasLogicOperators()
-            ? ['$and' => $this->conditions]
-            : array_merge_recursive(...$this->conditions);
+        $op = Pipeline::with($this->conditions)->flatten(true)->hasAny(function($value, string $key) {
+            return $key[0] === '$';
+        });
+
+        return $op ? ['$and' => $this->conditions] : array_merge_recursive(...$this->conditions);
     }
 }

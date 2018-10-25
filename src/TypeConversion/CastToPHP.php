@@ -11,7 +11,7 @@ use MongoDB\Model\BSONDocument;
 /**
  * Convert MongoDB type to PHP type.
  */
-class ToPHP implements ToPHPInterface
+class CastToPHP
 {
     /**
      * Convert BSONArray or BSONDocument to array or object
