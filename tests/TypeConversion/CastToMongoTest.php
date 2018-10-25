@@ -2,7 +2,6 @@
 
 namespace Jasny\DB\Mongo\Tests\TypeConversion;
 
-use Improved\Iterator\CombineIterator;
 use Jasny\DB\Mongo\TypeConversion\CastToMongo;
 use Jasny\TestHelper;
 use MongoDB\BSON;
@@ -114,10 +113,25 @@ class CastToMongoTest extends TestCase
         $this->assertEquals($expected, $resultArr);
     }
 
+    /**
+     * @expectedException \OverflowException
+     */
+    public function testRecursionCircularReference()
+    {
+        $objectA = new \stdClass();
+        $objectB = new \stdClass();
+
+        $objectA->b = $objectB;
+        $objectB->a = $objectA;
+
+        $cast = new CastToMongo();
+        $cast($objectA);
+    }
+
 
     public function testWithPersistable()
     {
-        $className = ucfirst(__FUNCTION__) . 'JsonSerializable';
+        $className = 'CastToMongo' . ucfirst(__FUNCTION__) . 'JsonSerializable';
 
         $object = $this->getMockBuilder(\JsonSerializable::class)
             ->setMockClassName($className)
@@ -141,7 +155,7 @@ class CastToMongoTest extends TestCase
 
     public function testWithPersistableCallback()
     {
-        $className = ucfirst(__FUNCTION__) . 'JsonSerializable';
+        $className = 'CastToMongo' . ucfirst(__FUNCTION__) . 'JsonSerializable';
 
         $object = $this->getMockBuilder(\JsonSerializable::class)
             ->setMockClassName($className)
@@ -158,7 +172,7 @@ class CastToMongoTest extends TestCase
 
     public function testWithConversionObject()
     {
-        $className = ucfirst(__FUNCTION__) . 'JsonSerializable';
+        $className = 'CastToMongo' . ucfirst(__FUNCTION__) . 'JsonSerializable';
 
         $object = $this->getMockBuilder(\JsonSerializable::class)
             ->setMockClassName($className)

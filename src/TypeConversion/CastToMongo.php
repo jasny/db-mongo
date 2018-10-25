@@ -18,8 +18,14 @@ class CastToMongo
     /**
      * @var array<string, callable>
      */
-    protected $custom = [];
+    protected $conversions = [];
 
+
+    public function __construct()
+    {
+        $toBsonDateTime = \Closure::fromCallable([$this, 'toBsonDateTime'])->bindTo(null);
+        $this->conversions[\DateTimeInterface::class] = $toBsonDateTime;
+    }
 
     /**
      * Create service which persist objects of a class as if it implemented the BSON\Persistable interface.
@@ -31,14 +37,14 @@ class CastToMongo
      */
     public function withPersistable(string $class, ?callable $convert = null)
     {
-        $callback = function($object) use ($convert) {
+        $callback = (function($object) use ($convert) {
             $values = isset($convert) ? $convert($object) : object_get_properties($object, true);
             expect_type($values, ['array'], \UnexpectedValueException::class);
 
             return ['__pclass' => get_class($object)] + $values;
-        };
+        })->bindTo(null);
 
-        return $this->withConversion($class, $callback->bindTo(null));
+        return $this->withConversion($class, $callback);
     }
 
     /**
@@ -51,7 +57,7 @@ class CastToMongo
     public function withConversion(string $type, callable $convert)
     {
         $clone = clone $this;
-        $clone->custom[$type] = $convert;
+        $clone->conversions[$type] = $convert;
 
         return $clone;
     }
@@ -59,15 +65,29 @@ class CastToMongo
     /**
      * Convert non scalar value to mongodb type.
      *
-     * @param object|iterable $value
-     * @param int             $depth  Recursion depth
-     * @return \Generator
+     * @param iterable|\stdClass $item
+     * @param int                $depth  Recursion depth
+     * @return iterable|\stdClass
      */
-    protected function convertStructured($value, $depth): \Generator
+    protected function applyRecursive($item, int $depth = 0)
     {
-        foreach ($value as $key => $item) {
-            yield $key => $this->convertValue($item, $depth + 1); // Recursion
+        if ($depth >= 32) {
+            throw new \OverflowException("Unable to convert MongoDB type to value; possible circular reference");
         }
+
+        $iterable = $item instanceof \stdClass ? (array)$item : $item;
+
+        $generator = i\iterable_map($iterable, function($value) use ($depth) {
+            return $this->convertValue($value, $depth + 1); // recursion
+        });
+
+        if ($item instanceof \Traversable) {
+            return $generator;
+        }
+
+        $array = i\iterable_to_array($generator, true);
+
+        return is_object($item) ? (object)$array : $array;
     }
 
     /**
@@ -79,39 +99,26 @@ class CastToMongo
      */
     protected function convertValue($value, $depth = 0)
     {
-        if ($depth >= 100) {
-            throw new \OverflowException("Unable to convert value to MongoDB type; possible circular reference");
+        if (is_scalar($value) || $value === null || $value instanceof BSON\Type) {
+            return $value; // Quick return
         }
 
-        switch (true) {
-            case $value === null:
-            case is_scalar($value):
-            case $value instanceof BSON\Type:
-                return $value;
-
-            case is_array($value):
-                $iterator = $this->convertStructured($value, $depth);
-                return i\iterable_to_array($iterator, true);
-            case $value instanceof \Traversable:
-                return $this->convertStructured($value, $depth);
-            case $value instanceof \stdClass:
-                $iterator = $this->convertStructured($value, $depth);
-                return (object)i\iterable_to_array($iterator, true);
-
-            case $value instanceof \DateTimeInterface:
-                return new BSON\UTCDateTime($value->getTimestamp() * 1000);
-
-            case is_object($value):
-                $converted = $this->convertObject($value);
-                return $this->convertValue($converted, $depth + 1); // recursion
-            case is_resource($value):
-                $converted = $this->convertResource($value);
-                return $this->convertValue($converted, $depth + 1); // recursion
-
-            default:
-                $type = get_type_description($value);
-                throw new \UnexpectedValueException("Unable to cast $type to MongoDB type");
+        if (is_iterable($value) || $value instanceof \stdClass) {
+            return $this->applyRecursive($value, $depth);
         }
+
+        if (is_object($value)) {
+            $converted = $this->convertObject($value);
+            return $this->convertValue($converted, $depth + 1); // recursion
+        }
+
+        if (is_resource($value)) {
+            $converted = $this->convertResource($value);
+            return $this->convertValue($converted, $depth + 1); // recursion
+        }
+
+        $type = get_type_description($value);
+        throw new \UnexpectedValueException("Unable to cast $type to MongoDB type");
     }
 
     /**
@@ -126,11 +133,11 @@ class CastToMongo
 
         $type = get_resource_type($value) . ' resource';
 
-        if (!isset($this->custom[$type])) {
+        if (!isset($this->conversions[$type])) {
             throw new \UnexpectedValueException("Unable to cast $type to MongoDB type");
         }
 
-        return i\function_call($this->custom[$type], $value);
+        return i\function_call($this->conversions[$type], $value);
     }
 
     /**
@@ -143,7 +150,7 @@ class CastToMongo
     {
         expect_type($value, 'object');
 
-        $convert = i\iterable_find($this->custom, function($callable, string $class) use ($value) {
+        $convert = i\iterable_find($this->conversions, function($callable, string $class) use ($value) {
             return is_a($value, $class);
         });
 
@@ -153,6 +160,18 @@ class CastToMongo
         }
 
         return i\function_call($convert, $value);
+    }
+
+
+    /**
+     * Convert DateTime object to BSON UTCDateTime.
+     *
+     * @param \DateTimeImmutable $date
+     * @return BSON\UTCDateTime
+     */
+    protected function toBsonDateTime(\DateTimeInterface $date): BSON\UTCDateTime
+    {
+        return new BSON\UTCDateTime($date->getTimestamp() * 1000);
     }
 
 
