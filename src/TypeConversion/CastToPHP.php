@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\TypeConversion;
 
@@ -208,8 +206,9 @@ class CastToPHP
     /**
      * Convert BSON UTCDateTime to DateTime object.
      *
-     * @param BSON\UTCDateTime $bson
+     * @param BSON\UTCDateTime $bsonDate
      * @return \DateTimeImmutable
+     * @throws \Exception
      */
     protected function toDateTime(BSON\UTCDateTime $bsonDate): \DateTimeImmutable
     {

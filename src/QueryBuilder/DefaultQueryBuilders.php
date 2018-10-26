@@ -1,9 +1,9 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\QueryBuilder;
 
+use Improved as i;
+use const Improved\FUNCTION_ARGUMENT_PLACEHOLDER as ___;
 use Jasny\DB\FieldMap\FieldMap;
 use Jasny\DB\Mongo\TypeConversion\CastToMongo;
 use Jasny\DB\QueryBuilder\FilterParser;
@@ -40,10 +40,8 @@ final class DefaultQueryBuilders
         return (new StagedQueryBuilder)
             ->onPrepare(new FieldMap(['id' => '_id']))
             ->onPrepare(new CastToMongo())
-            ->onCompose(function(iterable $iterable) {
-                return iterable_chunk($iterable, 100);
-            })
-            ->onBuild(new SaveQueryBuildStep(new OptionConverter()));
+            ->onCompose(i\function_partial(i\iterable_chunk, ___, 100))
+            ->onBuild(new SaveQueryBuildStep());
     }
 
     /**

@@ -1,7 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 
+use Improved as i;
 use Jasny\DB\Mongo\QueryBuilder\SaveQueryBuildStep;
 use PHPUnit\Framework\TestCase;
 
@@ -49,6 +50,6 @@ class SaveQueryBuildStepTest extends TestCase
         ];
 
         $this->assertInstanceOf(\Iterator::class, $statements);
-        $this->assertEquals($expected, iterator_to_array($statements, false));
+        $this->assertEquals($expected, i\iterable_to_array($statements, false));
     }
 }

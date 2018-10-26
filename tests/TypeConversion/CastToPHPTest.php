@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Tests\TypeConversion;
 
@@ -200,7 +200,7 @@ class CastToPHPTest extends TestCase
     public function testWithNonPersistable()
     {
         $className = 'CastToPHP' . ucfirst(__FUNCTION__) . 'JsonSerializable';
-        $object = $this->getMockBuilder(\JsonSerializable::class)
+        $this->getMockBuilder(\JsonSerializable::class)
             ->setMockClassName($className)
             ->getMock();
 

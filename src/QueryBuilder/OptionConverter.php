@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\QueryBuilder;
 
@@ -90,7 +88,7 @@ class OptionConverter
         $projection = [];
 
         foreach ($fields as $field) {
-            expect_type($field, 'string', \InvalidOptionException::class);
+            expect_type($field, 'string', InvalidOptionException::class);
 
             $projection[$field] = $inc;
         }
@@ -109,7 +107,7 @@ class OptionConverter
         $sort = [];
 
         foreach ($fields as $field) {
-            expect_type($field, 'string', \InvalidOptionException::class);
+            expect_type($field, 'string', InvalidOptionException::class);
 
             $asc = $field[0] === '~' ? -1 : 1;
             $key = $asc === -1 ? substr($field, 1) : $field;

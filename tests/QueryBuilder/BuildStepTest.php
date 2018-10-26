@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 
@@ -9,6 +9,7 @@ use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\Option\QueryOptionInterface;
 use Jasny\TestHelper;
 use PHPUnit\Framework\MockObject\Builder\InvocationMocker;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -21,6 +22,7 @@ class BuildStepTest extends TestCase
     public function test()
     {
         $option = $this->createMock(QueryOptionInterface::class);
+        /** @var OptionConverter|MockObject $optionConverter */
         $optionConverter = $this->createMock(OptionConverter::class);
         $optionConverter->expects($this->once())->method('convert')
             ->with([$option])->willReturn(['limit' => 10]);
@@ -29,14 +31,14 @@ class BuildStepTest extends TestCase
 
         $callbacks[] = $this->createCallbackMock($this->once(), function(InvocationMocker $invoke) use ($option) {
             $invoke->with($this->isInstanceOf(Query::class), 'foo', '', 42, [$option]);
-            $invoke->willReturnCallback(function($query) {
+            $invoke->willReturnCallback(function(Query $query) {
                 $query->add(['foo' => 'XLII']);
             });
         });
 
         $callbacks[] = $this->createCallbackMock($this->once(), function(InvocationMocker $invoke) use ($option) {
             $invoke->with($this->isInstanceOf(Query::class), 'color', 'not', 'blue', [$option]);
-            $invoke->willReturnCallback(function($query) {
+        $invoke->willReturnCallback(function(Query $query) {
                 $query->add(['color' => ['$not' => 'blue']]);
             });
         });
