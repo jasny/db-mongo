@@ -31,11 +31,11 @@ class DefaultQueryBuilderTest extends TestCase
 
     public function testCreateSaveQueryBuilder()
     {
-
+        $this->markTestIncomplete();
     }
 
     public function testCreateUpdateQueryBuilder()
     {
-
+        $this->markTestIncomplete();
     }
 }

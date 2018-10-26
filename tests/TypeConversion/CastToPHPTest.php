@@ -64,6 +64,79 @@ class CastToPHPTest extends TestCase
     }
 
 
+    public function testRecursionArray()
+    {
+        $value = [
+            ['one', 'two', 'three'],
+            (object)['foo' => 42, 'date' => new BSON\UTCDateTime(strtotime('2000-01-01') * 1000)]
+        ];
+
+        $cast = new CastToPHP();
+        $result = $cast($value);
+
+        $expected = [
+            ['one', 'two', 'three'],
+            (object)['foo' => 42, 'date' => new \DateTimeImmutable('2000-01-01')]
+        ];
+
+        $this->assertEquals($expected, $result);
+    }
+
+    public function testRecursionObject()
+    {
+        $value = (object)[
+            'a' => ['one', 'two', 'three'],
+            'b' => (object)['foo' => 42, 'date' => new BSON\UTCDateTime(strtotime('2000-01-01') * 1000)]
+        ];
+
+        $cast = new CastToPHP();
+        $result = $cast($value);
+
+        $expected = (object)[
+            'a' => ['one', 'two', 'three'],
+            'b' => (object)['foo' => 42, 'date' => new \DateTimeImmutable('2000-01-01')]
+        ];
+
+        $this->assertEquals($expected, $result);
+    }
+
+    public function testRecursionIterator()
+    {
+        $value = new \ArrayIterator([
+            ['one', 'two', 'three'],
+            (object)['foo' => 42, 'date' => new BSON\UTCDateTime(strtotime('2000-01-01') * 1000)]
+        ]);
+
+        $cast = new CastToPHP();
+        $result = $cast($value);
+
+        $this->assertInstanceOf(\Iterator::class, $result);
+        $resultArr = iterator_to_array($result, true);
+
+        $expected = [
+            ['one', 'two', 'three'],
+            (object)['foo' => 42, 'date' => new \DateTimeImmutable('2000-01-01')]
+        ];
+
+        $this->assertEquals($expected, $resultArr);
+    }
+
+    /**
+     * @expectedException \OverflowException
+     */
+    public function testRecursionCircularReference()
+    {
+        $objectA = new \stdClass();
+        $objectB = new \stdClass();
+
+        $objectA->b = $objectB;
+        $objectB->a = $objectA;
+
+        $cast = new CastToPHP();
+        $cast($objectA);
+    }
+
+    
     public function testWithPersistable()
     {
         $object = new class() implements \JsonSerializable {
@@ -152,5 +225,44 @@ class CastToPHPTest extends TestCase
 
         $result = $cast($regexp);
         $this->assertEquals('/abc/', $result);
+    }
+
+    public function testWithBinary()
+    {
+        $binary = new BSON\Binary("abc\0xyz", 140);
+
+        $callback = $this->createCallbackMock($this->once(), [$binary], 'ABC:XYZ');
+        $cast = (new CastToPHP)->withBinary(140, $callback);
+
+        $result = $cast($binary);
+        $this->assertEquals('ABC:XYZ', $result);
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     */
+    public function testWithBSONInvalidClass()
+    {
+        (new CastToPHP)->withBSON(\DateTime::class, function() {});
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     */
+    public function testWithBinaryInvalidType()
+    {
+        (new CastToPHP)->withBinary(1000, function() {});
+    }
+
+    public function testWithBSONUnknown()
+    {
+        $regexp = new BSON\Regex('\d+');
+
+        $cast = new CastToPHP();
+
+        $result = @$cast($regexp);
+        $this->assertSame($regexp, $result);
+
+        $this->assertLastError(E_USER_WARNING, "Unable to convert MongoDB\BSON\Regex object to PHP type");
     }
 }

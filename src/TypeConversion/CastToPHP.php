@@ -124,7 +124,7 @@ class CastToPHP
 
         $array = i\iterable_to_array($generator, true);
 
-        return is_object($item) ? (object)$array : $array;
+        return $item instanceof \stdClass ? (object)$array : $array;
     }
 
     /**
