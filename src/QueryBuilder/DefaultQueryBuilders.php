@@ -38,7 +38,7 @@ final class DefaultQueryBuilders
     public static function createSaveQueryBuilder(): StagedQueryBuilder
     {
         return (new StagedQueryBuilder)
-            ->onPrepare(new FieldMap(['id' => '_id']))
+            ->onPrepare(i\function_partial(i\iterable_map, ___, new FieldMap(['id' => '_id'])))
             ->onPrepare(new CastToMongo())
             ->onCompose(i\function_partial(i\iterable_chunk, ___, 100))
             ->onBuild(new SaveQueryBuildStep());

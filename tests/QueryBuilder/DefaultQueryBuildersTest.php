@@ -69,6 +69,7 @@ class DefaultQueryBuildersTest extends TestCase
         /** @var Query $query */
         $query = $builder->buildQuery(
             [
+                update\set('id', 10),
                 update\set('foo', 42),
                 update\inc('count'),
                 update\patch('bar', ['one' => 1, 'two' => 2])
@@ -78,7 +79,7 @@ class DefaultQueryBuildersTest extends TestCase
 
         $this->assertInstanceOf(Query::class, $query);
 
-        $expected = ['$set' => ['foo' => 42, 'bar.one' => 1, 'bar.two' => 2], '$inc' => ['count' => 1]];
+        $expected = ['$set' => ['_id' => 10, 'foo' => 42, 'bar.one' => 1, 'bar.two' => 2], '$inc' => ['count' => 1]];
         $this->assertEquals($expected, $query->toArray());
         $this->assertEquals(['limit' => 1], $query->getOptions());
     }
