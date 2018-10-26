@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Write;
 
-use Jasny\DB\Mongo\QueryBuilder\DefaultQueryBuilder;
+use Jasny\DB\Mongo\QueryBuilder\DefaultQueryBuilders;
 use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\Write\WriterInterface;
@@ -56,7 +56,7 @@ class MongoWriter implements WriterInterface
     public function getQueryBuilder(): QueryBuilderInterface
     {
         if (!isset($this->queryBuilder)) {
-            $this->queryBuilder = DefaultQueryBuilder::filter();
+            $this->queryBuilder = DefaultQueryBuilders::filter();
         }
 
         return $this->queryBuilder;
@@ -89,7 +89,7 @@ class MongoWriter implements WriterInterface
     public function getSaveQueryBuilder(): QueryBuilderInterface
     {
         if (!isset($this->saveQueryBuilder)) {
-            $this->saveQueryBuilder = DefaultQueryBuilder::save();
+            $this->saveQueryBuilder = DefaultQueryBuilders::save();
         }
 
         return $this->saveQueryBuilder;
@@ -122,7 +122,7 @@ class MongoWriter implements WriterInterface
     public function getUpdateQueryBuilder(): QueryBuilderInterface
     {
         if (!isset($this->updateQueryBuilder)) {
-            $this->updateQueryBuilder = DefaultQueryBuilder::update();
+            $this->updateQueryBuilder = DefaultQueryBuilders::update();
         }
 
         return $this->updateQueryBuilder;

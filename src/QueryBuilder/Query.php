@@ -8,7 +8,6 @@ use Improved\IteratorPipeline\Pipeline;
 
 /**
  * Accumulator for MongoDB query builder.
- * Only for 'filter' part of find, update and delete queries.
  */
 class Query
 {
@@ -20,7 +19,7 @@ class Query
     /**
      * @var array<string, array>
      */
-    protected $conditions = [];
+    protected $statements = [];
 
 
     /**
@@ -46,14 +45,14 @@ class Query
     }
 
     /**
-     * Add a condition to the query
+     * Add a statement to the query.
      *
-     * @param array $condition
+     * @param array $statement
      * @return void
      */
-    public function add(array $condition): void
+    public function add(array $statement): void
     {
-        $this->conditions[] = $condition;
+        $this->statements[] = $statement;
     }
 
 
@@ -68,16 +67,34 @@ class Query
     }
 
     /**
-     * Get MongoDB query filter.
+     * Get all statements merged.
+     *
+     * @return array
+     */
+    protected function getMergedStatements()
+    {
+        return Pipeline::with($this->statements)
+            ->flatten(true)
+            ->group(function($value, string $key) {
+                return $key;
+            })
+            ->map(function(array $value, string $key) {
+                return $key[0] === '$' ? array_merge(...$value) : end($value);
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get MongoDB query statements.
      *
      * @return array
      */
     public function toArray(): array
     {
-        $op = Pipeline::with($this->conditions)->flatten(true)->hasAny(function($value, string $key) {
-            return $key[0] === '$';
+        $hasOr = Pipeline::with($this->statements)->flatten(true)->hasAny(function($value, string $key) {
+            return $key === '$or';
         });
 
-        return $op ? ['$and' => $this->conditions] : array_merge_recursive(...$this->conditions);
+        return $hasOr ? ['$and' => $this->statements] : $this->getMergedStatements();
     }
 }

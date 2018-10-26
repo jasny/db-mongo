@@ -9,6 +9,7 @@ use Jasny\DB\Mongo\QueryBuilder\Query;
 use PHPUnit\Framework\TestCase;
 
 /**
+ * @covers \Jasny\DB\Mongo\QueryBuilder\AbstractComposer
  * @covers \Jasny\DB\Mongo\QueryBuilder\FilterComposer
  */
 class FilterComposerTest extends TestCase
@@ -78,8 +79,8 @@ class FilterComposerTest extends TestCase
     public function invalidInfoProvider()
     {
         return [
-            ['$min', '', 42, "Invalid filter key '\$min': Starting with '$' isn't allowed."],
-            ['foo', 'dance', 42, "Invalid filter key 'foo (dance)': Unknown operator 'dance'."],
+            ['$min', '', 42, "Invalid field '\$min': Starting with '$' isn't allowed."],
+            ['foo', 'dance', 42, "Invalid field 'foo (dance)': Unknown operator 'dance'."],
             ['foo', 'any', ['$min' => 10], "Invalid filter value for 'foo (any)': "
                 . "Illegal array key '\$min', starting with '$' isn't allowed."],
             ['foo', 'any', [(object)['bar' => 22], (object)['$max' => 10]], "Invalid filter value for 'foo (any)': "
@@ -108,7 +109,7 @@ class FilterComposerTest extends TestCase
 
     /**
      * @expectedException \OverflowException
-     * @expectedExceptionMessage Unable to apply filter 'foo'; possible circular reference
+     * @expectedExceptionMessage Unable to apply 'foo'; possible circular reference
      */
     public function testRecursionCircularReference()
     {

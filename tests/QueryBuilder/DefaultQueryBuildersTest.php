@@ -4,18 +4,19 @@ namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 
 use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\Option as opt;
-use Jasny\DB\Mongo\QueryBuilder\DefaultQueryBuilder;
+use Jasny\DB\Update as update;
+use Jasny\DB\Mongo\QueryBuilder\DefaultQueryBuilders;
 use Jasny\DB\QueryBuilder\StagedQueryBuilder;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilder\DefaultQueryBuilder
+ * @covers \Jasny\DB\Mongo\QueryBuilder\DefaultQueryBuilders
  */
-class DefaultQueryBuilderTest extends TestCase
+class DefaultQueryBuildersTest extends TestCase
 {
     public function testCreateFilterQueryBuilder()
     {
-        $builder = DefaultQueryBuilder::createFilterQueryBuilder();
+        $builder = DefaultQueryBuilders::createFilterQueryBuilder();
         $this->assertInstanceOf(StagedQueryBuilder::class, $builder);
 
         /** @var Query $query */
@@ -36,6 +37,23 @@ class DefaultQueryBuilderTest extends TestCase
 
     public function testCreateUpdateQueryBuilder()
     {
-        $this->markTestIncomplete();
+        $builder = DefaultQueryBuilders::createUpdateQueryBuilder();
+        $this->assertInstanceOf(StagedQueryBuilder::class, $builder);
+
+        /** @var Query $query */
+        $query = $builder->buildQuery(
+            [
+                update\set('foo', 42),
+                update\inc('count'),
+                update\patch('bar', ['one' => 1, 'two' => 2])
+            ],
+            [opt\limit(1)]
+        );
+
+        $this->assertInstanceOf(Query::class, $query);
+
+        $expected = ['$set' => ['foo' => 42, 'bar.one' => 1, 'bar.two' => 2], '$inc' => ['count' => 1]];
+        $this->assertEquals($expected, $query->toArray());
+        $this->assertEquals(['limit' => 1], $query->getOptions());
     }
 }

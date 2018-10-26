@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\QueryBuilder;
 
-use Improved as i;
 use Jasny\DB\FieldMap\FieldMap;
 use Jasny\DB\Mongo\TypeConversion\CastToMongo;
 use Jasny\DB\QueryBuilder\FilterParser;
 use Jasny\DB\QueryBuilder\StagedQueryBuilder;
+use Jasny\DB\Update\UpdateParser;
 
 /**
  * Default query builders
  */
-final class DefaultQueryBuilder
+final class DefaultQueryBuilders
 {
     /**
      * Create a builder for `find` and `delete` queries.
@@ -54,10 +54,10 @@ final class DefaultQueryBuilder
     public static function createUpdateQueryBuilder(): StagedQueryBuilder
     {
         return (new StagedQueryBuilder)
-            ->onPrepare(new FilterParser())
+            ->onPrepare(new UpdateParser())
             ->onPrepare(new FieldMap(['id' => '_id']))
             ->onPrepare(new CastToMongo())
-            ->onCompose(new FilterComposer())
+            ->onCompose(new UpdateComposer())
             ->onBuild(new BuildStep(new OptionConverter()));
     }
 }
