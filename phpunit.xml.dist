@@ -2,15 +2,14 @@
 
 <phpunit
     colors="true"
-    bootstrap="tests/bootstrap.php"
+    bootstrap="vendor/autoload.php"
     convertErrorsToExceptions="true"
     convertNoticesToExceptions="true"
     convertWarningsToExceptions="true"
 >
     <testsuites>
-        <testsuite>
+        <testsuite name="tests">
             <directory>tests/</directory>
-            <exclude>tests/use-db/FullTest.php</exclude>
         </testsuite>
     </testsuites>
     <filter>
@@ -20,6 +19,6 @@
     </filter>
     <logging>
         <log type="coverage-text" target="php://stdout"/>
-    </logging>
+    </logging>    
 </phpunit>
 

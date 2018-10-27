@@ -1,3 +1,5 @@
 /vendor
 /composer.lock
 /tests/coverage
+src/old/
+tests/old
