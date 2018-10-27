@@ -19,6 +19,15 @@ use Jasny\DB\Update\UpdateParser;
 final class DefaultBuilders
 {
     /**
+     * Create a new Cursor
+     * MongoDB\Driver\Cursor objects are returned as the result of an executed command or query and cannot be constructed directly.
+     * @link https://php.net/manual/en/mongodb-driver-cursor.construct.php
+     */
+    final private function __construct()
+    {
+    }
+
+    /**
      * Create a builder for `find` and `delete` queries.
      *
      * @return StagedQueryBuilder

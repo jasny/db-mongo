@@ -108,7 +108,7 @@ class MongoReader implements Read, Read\WithBuilders
         $query = $this->queryBuilder->buildQuery($filter ?? [], $opts);
         expect_type($query, Query::class, \UnexpectedValueException::class);
 
-        return $storage->count($query->getConditions(), $query->getOptions());
+        return $storage->count($query->toArray(), $query->getOptions());
     }
 
     /**
@@ -127,11 +127,11 @@ class MongoReader implements Read, Read\WithBuilders
         $query = $this->queryBuilder->buildQuery($filter ?? [], $opts);
         expect_type($query, Query::class, \UnexpectedValueException::class);
 
-        $cursor = $storage->find($query->getConditions(), $query->getOptions());
+        $cursor = $storage->find($query->toArray(), $query->getOptions());
 
         /** @var Result $result */
         $result = $this->resultBuilder->with($cursor);
-        expect_type($query, Result::class, \UnexpectedValueException::class);
+        expect_type($result, Result::class, \UnexpectedValueException::class);
 
         return $result;
     }

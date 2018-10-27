@@ -4,9 +4,12 @@ namespace Jasny\DB\Mongo\Tests\Read;
 
 use Improved\IteratorPipeline\PipelineBuilder;
 use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
+use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\Mongo\Read\MongoReader;
+use Jasny\DB\Option as opt;
 use Jasny\DB\QueryBuilder\QueryBuilding;
 use Jasny\DB\QueryBuilder\StagedQueryBuilder;
+use Jasny\DB\Result;
 use MongoDB\Collection;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -63,7 +66,7 @@ class MongoReaderTest extends TestCase
     public function testWithQueryBuilder()
     {
         /** @var PipelineBuilder|MockObject $builder */
-        $builder = $this->createMock(QueryBuilding::class);
+        $builder = $this->createMock(PipelineBuilder::class);
 
         $reader = $this->reader->withResultBuilder($builder);
 
@@ -88,9 +91,15 @@ class MongoReaderTest extends TestCase
 
     public function testCount()
     {
-        $this->queryBuilder->expects($this->once())->method('__invoke')
-            ->with(['foo' => 42, 'color(not)' => 'blue'])
+        $query = $this->createMock(Query::class);
+        $query->expects($this->once())->method('toArray')
             ->willReturn(['foo' => 42, 'color' => ['$ne' => 'blue']]);
+        $query->expects($this->once())->method('getOptions')
+            ->willReturn(['limit' => 10]);
+
+        $this->queryBuilder->expects($this->once())->method('buildQuery')
+            ->with(['foo' => 42, 'color(not)' => 'blue'], [opt\limit(10)])
+            ->willReturn($query);
 
         /** @var Collection|MockObject $collection */
         $collection = $this->createMock(Collection::class);
@@ -98,13 +107,42 @@ class MongoReaderTest extends TestCase
             ->with(['foo' => 42, 'color' => ['$ne' => 'blue']])
             ->willReturn(10);
 
-        $count = $this->reader->count($collection, ['foo' => 42, 'color(not)' => 'blue']);
+        $count = $this->reader->count($collection, ['foo' => 42, 'color(not)' => 'blue'], [opt\limit(10)]);
 
         $this->assertEquals(10, $count);
     }
 
     public function testFetch()
     {
-        $this->markTestIncomplete();
+        $query = $this->createMock(Query::class);
+        $query->expects($this->once())->method('toArray')
+            ->willReturn(['foo' => 42, 'color' => ['$ne' => 'blue']]);
+        $query->expects($this->once())->method('getOptions')
+            ->willReturn(['limit' => 10]);
+
+        $this->queryBuilder->expects($this->once())->method('buildQuery')
+            ->with(['foo' => 42, 'color(not)' => 'blue'], [opt\limit(10)])
+            ->willReturn($query);
+
+        $cursor = new \ArrayIterator([
+            ['foo' => 42, 'color' => 'red'],
+            ['foo' => 42, 'color' => 'blue']
+        ]);
+
+        /** @var Collection|MockObject $collection */
+        $collection = $this->createMock(Collection::class);
+        $collection->expects($this->once())->method('find')
+            ->with(['foo' => 42, 'color' => ['$ne' => 'blue']])
+            ->willReturn($cursor);
+
+        $expected = new Result();
+
+        $this->resultBuilder->expects($this->once())->method('with')
+            ->with($cursor)
+            ->willReturn($expected);
+
+        $result = $this->reader->fetch($collection, ['foo' => 42, 'color(not)' => 'blue'], [opt\limit(10)]);
+
+        $this->assertSame($expected, $result);
     }
 }
