@@ -1,20 +1,20 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilding;
+namespace Jasny\DB\Mongo\QueryBuilder;
 
 use Improved as i;
 use const Improved\FUNCTION_ARGUMENT_PLACEHOLDER as __;
 use Improved\IteratorPipeline\PipelineBuilder;
 use Jasny\DB\FieldMap\ConfiguredFieldMap;
-use Jasny\DB\Mongo\QueryBuilding\Step\BuildStep;
-use Jasny\DB\Mongo\QueryBuilding\Step\FilterComposer;
-use Jasny\DB\Mongo\QueryBuilding\Step\SaveQueryBuildStep;
-use Jasny\DB\Mongo\QueryBuilding\Step\UpdateComposer;
+use Jasny\DB\Mongo\QueryBuilder\Step\BuildStep;
+use Jasny\DB\Mongo\QueryBuilder\Step\FilterComposer;
+use Jasny\DB\Mongo\QueryBuilder\Step\SaveQueryBuildStep;
+use Jasny\DB\Mongo\QueryBuilder\Step\UpdateComposer;
 use Jasny\DB\Mongo\TypeConversion\CastToMongo;
 use Jasny\DB\Mongo\TypeConversion\CastToPHP;
-use Jasny\DB\QueryBuilding\StagedQueryBuilder;
-use Jasny\DB\QueryBuilding\Step\FilterParser;
-use Jasny\DB\QueryBuilding\Step\UpdateParser;
+use Jasny\DB\QueryBuilder\StagedQueryBuilder;
+use Jasny\DB\QueryBuilder\Step\FilterParser;
+use Jasny\DB\QueryBuilder\Step\UpdateParser;
 use Jasny\DB\Result;
 
 /**

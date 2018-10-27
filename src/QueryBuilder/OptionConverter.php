@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilding;
+namespace Jasny\DB\Mongo\QueryBuilder;
 
 use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Exception\InvalidOptionException;

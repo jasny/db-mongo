@@ -3,12 +3,12 @@
 namespace Jasny\DB\Mongo\Tests\Read;
 
 use Improved\IteratorPipeline\PipelineBuilder;
-use Jasny\DB\Mongo\QueryBuilding\DefaultBuilders;
-use Jasny\DB\Mongo\QueryBuilding\Query;
+use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
+use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\Mongo\Read\MongoReader;
 use Jasny\DB\Option as opt;
-use Jasny\DB\QueryBuilding;
-use Jasny\DB\QueryBuilding\StagedQueryBuilder;
+use Jasny\DB\QueryBuilder;
+use Jasny\DB\QueryBuilder\StagedQueryBuilder;
 use Jasny\DB\Result;
 use MongoDB\Collection;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -25,7 +25,7 @@ class MongoReaderTest extends TestCase
     protected $reader;
 
     /**
-     * @var QueryBuilding|MockObject
+     * @var QueryBuilder|MockObject
      */
     protected $queryBuilder;
 
@@ -36,7 +36,7 @@ class MongoReaderTest extends TestCase
 
     public function setUp()
     {
-        $this->queryBuilder = $this->createMock(QueryBuilding::class);
+        $this->queryBuilder = $this->createMock(QueryBuilder::class);
         $this->resultBuilder = $this->createMock(PipelineBuilder::class);
 
         $this->reader = (new MongoReader)

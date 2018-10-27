@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Tests\QueryBuilding\Step;
+namespace Jasny\DB\Mongo\Tests\QueryBuilder\Step;
 
 use Improved\Iterator\CombineIterator;
-use Jasny\DB\Mongo\QueryBuilding\Step\BuildStep;
-use Jasny\DB\Mongo\QueryBuilding\OptionConverter;
-use Jasny\DB\Mongo\QueryBuilding\Query;
+use Jasny\DB\Mongo\QueryBuilder\Step\BuildStep;
+use Jasny\DB\Mongo\QueryBuilder\OptionConverter;
+use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\Option;
 use Jasny\TestHelper;
 use PHPUnit\Framework\MockObject\Builder\InvocationMocker;
@@ -13,7 +13,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilding\Step\BuildStep
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Step\BuildStep
  */
 class BuildStepTest extends TestCase
 {

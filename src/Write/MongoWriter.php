@@ -3,9 +3,9 @@
 namespace Jasny\DB\Mongo\Write;
 
 use Improved\IteratorPipeline\Pipeline;
-use Jasny\DB\Mongo\QueryBuilding\DefaultBuilders;
-use Jasny\DB\Mongo\QueryBuilding\Query;
-use Jasny\DB\QueryBuilding;
+use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
+use Jasny\DB\Mongo\QueryBuilder\Query;
+use Jasny\DB\QueryBuilder;
 use Jasny\DB\Update\UpdateOperation;
 use Jasny\DB\Write;
 use Jasny\DB\Result;
@@ -33,17 +33,17 @@ class MongoWriter implements Write, Write\WithBuilders
 
 
     /**
-     * @var QueryBuilding
+     * @var QueryBuilder
      */
     protected $queryBuilder;
 
     /**
-     * @var QueryBuilding
+     * @var QueryBuilder
      */
     protected $saveQueryBuilder;
 
     /**
-     * @var QueryBuilding
+     * @var QueryBuilder
      */
     protected $updateQueryBuilder;
 
@@ -51,9 +51,9 @@ class MongoWriter implements Write, Write\WithBuilders
     /**
      * Get the query builder.
      *
-     * @return QueryBuilding
+     * @return QueryBuilder
      */
-    public function getQueryBuilder(): QueryBuilding
+    public function getQueryBuilder(): QueryBuilder
     {
         if (!isset($this->queryBuilder)) {
             $this->queryBuilder = DefaultBuilders::createFilterQueryBuilder();
@@ -65,10 +65,10 @@ class MongoWriter implements Write, Write\WithBuilders
     /**
      * Create a reader with a custom query builder.
      *
-     * @param QueryBuilding $queryBuilder
+     * @param QueryBuilder $queryBuilder
      * @return static
      */
-    public function withQueryBuilder(QueryBuilding $queryBuilder): self
+    public function withQueryBuilder(QueryBuilder $queryBuilder): self
     {
         if ($this->queryBuilder === $queryBuilder) {
             return $this;
@@ -84,9 +84,9 @@ class MongoWriter implements Write, Write\WithBuilders
     /**
      * Get the query builder for saving new items
      *
-     * @return QueryBuilding
+     * @return QueryBuilder
      */
-    public function getSaveQueryBuilder(): QueryBuilding
+    public function getSaveQueryBuilder(): QueryBuilder
     {
         if (!isset($this->saveQueryBuilder)) {
             $this->saveQueryBuilder = DefaultBuilders::createSaveQueryBuilder();
@@ -98,10 +98,10 @@ class MongoWriter implements Write, Write\WithBuilders
     /**
      * Create a reader with a custom query builder.
      *
-     * @param QueryBuilding $queryBuilder
+     * @param QueryBuilder $queryBuilder
      * @return static
      */
-    public function withSaveQueryBuilder(QueryBuilding $queryBuilder): self
+    public function withSaveQueryBuilder(QueryBuilder $queryBuilder): self
     {
         if ($this->saveQueryBuilder === $queryBuilder) {
             return $this;
@@ -117,9 +117,9 @@ class MongoWriter implements Write, Write\WithBuilders
     /**
      * Get the query builder of updating items.
      *
-     * @return QueryBuilding
+     * @return QueryBuilder
      */
-    public function getUpdateQueryBuilder(): QueryBuilding
+    public function getUpdateQueryBuilder(): QueryBuilder
     {
         if (!isset($this->updateQueryBuilder)) {
             $this->updateQueryBuilder = DefaultBuilders::createUpdateQueryBuilder();
@@ -131,10 +131,10 @@ class MongoWriter implements Write, Write\WithBuilders
     /**
      * Create a reader with a custom query builder.
      *
-     * @param QueryBuilding $queryBuilder
+     * @param QueryBuilder $queryBuilder
      * @return static
      */
-    public function withUpdateQueryBuilder(QueryBuilding $queryBuilder): self
+    public function withUpdateQueryBuilder(QueryBuilder $queryBuilder): self
     {
         if ($this->updateQueryBuilder === $queryBuilder) {
             return $this;

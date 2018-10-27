@@ -1,14 +1,14 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Tests\QueryBuilding;
+namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 
 use Jasny\DB\Option;
 use Jasny\DB\Option as opt;
-use Jasny\DB\Mongo\QueryBuilding\OptionConverter;
+use Jasny\DB\Mongo\QueryBuilder\OptionConverter;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilding\OptionConverter
+ * @covers \Jasny\DB\Mongo\QueryBuilder\OptionConverter
  */
 class OptionConverterTest extends TestCase
 {

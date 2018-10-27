@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilding\Step;
+namespace Jasny\DB\Mongo\QueryBuilder\Step;
 
 use Improved as i;
 use function Jasny\array_without;

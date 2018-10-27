@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilding\Step;
+namespace Jasny\DB\Mongo\QueryBuilder\Step;
 
 use Jasny\DB\Exception\InvalidFilterException;
-use Jasny\DB\Mongo\QueryBuilding\Query;
+use Jasny\DB\Mongo\QueryBuilder\Query;
 
 /**
  * Standard compose step for filter query.

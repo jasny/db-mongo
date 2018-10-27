@@ -3,9 +3,9 @@
 namespace Jasny\DB\Mongo\Read;
 
 use Improved\IteratorPipeline\PipelineBuilder;
-use Jasny\DB\Mongo\QueryBuilding\DefaultBuilders;
-use Jasny\DB\Mongo\QueryBuilding\Query;
-use Jasny\DB\QueryBuilding;
+use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
+use Jasny\DB\Mongo\QueryBuilder\Query;
+use Jasny\DB\QueryBuilder;
 use Jasny\DB\Read;
 use Jasny\DB\Result;
 use MongoDB\Collection;
@@ -17,7 +17,7 @@ use function Jasny\expect_type;
 class MongoReader implements Read, Read\WithBuilders
 {
     /**
-     * @var QueryBuilding
+     * @var QueryBuilder
      */
     protected $queryBuilder;
 
@@ -30,9 +30,9 @@ class MongoReader implements Read, Read\WithBuilders
     /**
      * Get the query builder.
      *
-     * @return QueryBuilding
+     * @return QueryBuilder
      */
-    public function getQueryBuilder(): QueryBuilding
+    public function getQueryBuilder(): QueryBuilder
     {
         if (!isset($this->queryBuilder)) {
             $this->queryBuilder = DefaultBuilders::createFilterQueryBuilder();
@@ -44,10 +44,10 @@ class MongoReader implements Read, Read\WithBuilders
     /**
      * Create a reader with a custom query builder.
      *
-     * @param QueryBuilding $queryBuilder
+     * @param QueryBuilder $queryBuilder
      * @return static
      */
-    public function withQueryBuilder(QueryBuilding $queryBuilder): self
+    public function withQueryBuilder(QueryBuilder $queryBuilder): self
     {
         if ($this->queryBuilder === $queryBuilder) {
             return $this;

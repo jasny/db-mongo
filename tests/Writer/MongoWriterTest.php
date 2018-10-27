@@ -2,9 +2,8 @@
 
 namespace Jasny\DB\Mongo\Tests\Writer;
 
-use Improved\IteratorPipeline\PipelineBuilder;
 use Jasny\DB\Mongo\Write\MongoWriter;
-use Jasny\DB\QueryBuilding;
+use Jasny\DB\QueryBuilder;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -13,56 +12,49 @@ use PHPUnit\Framework\TestCase;
 class MongoWriterTest extends TestCase
 {
     /**
-     * @var MongoReader
+     * @var MongoWriter
      */
-    protected $reader;
+    protected $writer;
 
     /**
-     * @var QueryBuilding|MockObject
+     * @var QueryBuilder|MockObject
      */
     protected $filterQueryBuilder;
 
     /**
-     * @var QueryBuilding|MockObject
+     * @var QueryBuilder|MockObject
      */
     protected $updateQueryBuilder;
 
     /**
-     * @var QueryBuilding|MockObject
+     * @var QueryBuilder|MockObject
      */
     protected $saveQueryBuilder;
 
 
     public function setUp()
     {
-        $this->queryBuilder = $this->createMock(QueryBuilding::class);
+        $this->filterQueryBuilder = $this->createMock(QueryBuilder::class);
+        $this->updateQueryBuilder = $this->createMock(QueryBuilder::class);
+        $this->saveQueryBuilder = $this->createMock(QueryBuilder::class);
 
-        $this->reader = (new MongoWriter)
-            ->withQueryBuilder($this->queryBuilder);
+        $this->writer = (new MongoWriter)
+            ->withQueryBuilder($this->filterQueryBuilder)
+            ->withUpdateQueryBuilder($this->updateQueryBuilder)
+            ->withSaveQueryBuilder($this->saveQueryBuilder);
     }
 
 
-    public function testWithSaveQueryBuilder()
+    public function testGetQueryBuilder()
     {
-        $this->markTestIncomplete();
-    }
+        $reader = new MongoReader();
+        $builder = $reader->getQueryBuilder();
 
-    public function testSave()
-    {
-        $this->markTestIncomplete();
+        $this->assertInstanceOf(StagedQueryBuilder::class, $builder);
+        $this->assertEquals(DefaultBuilders::createFilterQueryBuilder(), $builder);
     }
 
     public function testGetUpdateQueryBuilder()
-    {
-        $this->markTestIncomplete();
-    }
-
-    public function testWithUpdateQueryBuilder()
-    {
-        $this->markTestIncomplete();
-    }
-
-    public function testGetQueryBuilder()
     {
         $this->markTestIncomplete();
     }
@@ -72,12 +64,29 @@ class MongoWriterTest extends TestCase
         $this->markTestIncomplete();
     }
 
-    public function testUpdate()
+
+    public function testWithQueryBuilder()
     {
         $this->markTestIncomplete();
     }
 
-    public function testWithQueryBuilder()
+    public function testWithUpdateQueryBuilder()
+    {
+        $this->markTestIncomplete();
+    }
+
+    public function testWithSaveQueryBuilder()
+    {
+        $this->markTestIncomplete();
+    }
+
+
+    public function testSave()
+    {
+        $this->markTestIncomplete();
+    }
+
+    public function testUpdate()
     {
         $this->markTestIncomplete();
     }

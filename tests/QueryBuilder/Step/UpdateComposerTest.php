@@ -1,16 +1,16 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Tests\QueryBuilding\Step;
+namespace Jasny\DB\Mongo\Tests\QueryBuilder\Step;
 
 use Improved as i;
 use Improved\Iterator\CombineIterator;
-use Jasny\DB\Mongo\QueryBuilding\Query;
-use Jasny\DB\Mongo\QueryBuilding\Step\UpdateComposer;
+use Jasny\DB\Mongo\QueryBuilder\Query;
+use Jasny\DB\Mongo\QueryBuilder\Step\UpdateComposer;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilding\Step\AbstractComposer
- * @covers \Jasny\DB\Mongo\QueryBuilding\Step\UpdateComposer
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Step\AbstractComposer
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Step\UpdateComposer
  */
 class UpdateComposerTest extends TestCase
 {
