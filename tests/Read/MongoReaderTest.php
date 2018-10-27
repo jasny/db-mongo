@@ -34,6 +34,7 @@ class MongoReaderTest extends TestCase
      */
     protected $resultBuilder;
 
+
     public function setUp()
     {
         $this->queryBuilder = $this->createMock(QueryBuilder::class);
@@ -65,15 +66,15 @@ class MongoReaderTest extends TestCase
 
     public function testWithQueryBuilder()
     {
-        /** @var PipelineBuilder|MockObject $builder */
-        $builder = $this->createMock(PipelineBuilder::class);
+        /** @var QueryBuilder|MockObject $builder */
+        $builder = $this->createMock(QueryBuilder::class);
 
-        $reader = $this->reader->withResultBuilder($builder);
+        $reader = $this->reader->withQueryBuilder($builder);
 
         $this->assertInstanceOf(MongoReader::class, $reader);
         $this->assertNotSame($this->reader, $reader);
 
-        $this->assertSame($builder, $reader->getResultBuilder());
+        $this->assertSame($builder, $reader->getQueryBuilder());
     }
 
     public function testWithResultBuilder()

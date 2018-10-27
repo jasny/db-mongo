@@ -3,15 +3,14 @@
 namespace Jasny\DB\Mongo\Write;
 
 use Improved\IteratorPipeline\Pipeline;
+use Improved\IteratorPipeline\PipelineBuilder;
+use Jasny\DB\Exception\InvalidOptionException;
 use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
-use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\QueryBuilder;
-use Jasny\DB\Update\UpdateOperation;
 use Jasny\DB\Write;
 use Jasny\DB\Result;
-use MongoDB\BSON;
-use MongoDB\BulkWriteResult;
-use MongoDB\Collection;
+use Jasny\DB\Option;
+use Jasny\DB\Option\LimitOption;
 use function Jasny\expect_type;
 
 /**
@@ -19,18 +18,9 @@ use function Jasny\expect_type;
  */
 class MongoWriter implements Write, Write\WithBuilders
 {
-    /**
-     * Meta data for save action
-     */
-    protected const SAVE_META = [
-        'deletedCount' => 0,
-        'insertedCount' => 0,
-        'matchedCount' => 0,
-        'modifiedCount' => 0,
-        'upsertedCount' => 0,
-        'acknowledged' => true
-    ];
-
+    use Traits\SaveTrait;
+    use Traits\UpdateTrait;
+    use Traits\DeleteTrait;
 
     /**
      * @var QueryBuilder
@@ -46,6 +36,11 @@ class MongoWriter implements Write, Write\WithBuilders
      * @var QueryBuilder
      */
     protected $updateQueryBuilder;
+
+    /**
+     * @var PipelineBuilder
+     */
+    protected $resultBuilder;
 
 
     /**
@@ -148,116 +143,81 @@ class MongoWriter implements Write, Write\WithBuilders
 
 
     /**
-     * Save the data.
-     * Returns an array with generated properties per entry.
+     * Get the result builder.
      *
-     * @param Collection $storage
-     * @param iterable   $items
-     * @param array      $opts
-     * @return Result&iterable<array>
+     * @return PipelineBuilder
      */
-    public function save($storage, iterable $items, array $opts = []): Result
+    public function getResultBuilder(): PipelineBuilder
     {
-        $counts = [];
-        $writeResults = [];
-
-        $batches = $this->getSaveQueryBuilder()->buildQuery($items, $opts);
-
-        foreach ($batches as $batch) {
-            $counts[] = count($batch);
-            $writeResults[] = $storage->bulkWrite($batch, ['ordered' => false]);
+        if (!isset($this->resultBuilder)) {
+            $this->resultBuilder = DefaultBuilders::createResultBuilder();
         }
 
-        return $this->combineWriteResults($writeResults, $counts);
+        return $this->resultBuilder;
     }
+
+    /**
+     * Create a reader with a custom result builder.
+     *
+     * @param PipelineBuilder $resultBuilder
+     * @return static
+     */
+    public function withResultBuilder(PipelineBuilder $resultBuilder): self
+    {
+        if ($this->resultBuilder === $resultBuilder) {
+            return $this;
+        }
+
+        $clone = clone $this;
+        $clone->resultBuilder = $resultBuilder;
+
+        return $clone;
+    }
+
 
     /**
      * Combine multiple bulk write results into a single result.
      *
-     * @param BulkWriteResult[] $writeResults
-     * @param int[]             $counts
+     * @param array $ids
+     * @param array $meta
      * @return Result&iterable<array>
      */
-    protected function combineWriteResults(array $writeResults, array $counts): Result
+    protected function createResult(array $ids, array $meta): Result
     {
-        $meta = self::SAVE_META;
+        $documents = Pipeline::with($ids)
+            ->cleanup()
+            ->map(function($id) {
+                return ['_id' => $id];
+            });
 
-        $ids = Pipeline::with($writeResults)
-            ->apply(function(BulkWriteResult $writeResult) use (&$meta) {
-                $meta['deletedCount'] += $writeResult->getDeletedCount();
-                $meta['insertedCount'] += $writeResult->getInsertedCount();
-                $meta['matchedCount'] += $writeResult->getMatchedCount();
-                $meta['modifiedCount'] += $writeResult->getModifiedCount();
-                $meta['upsertedCount'] += $writeResult->getUpsertedCount();
-                $meta['acknowledged'] = $meta['acknowledged'] && $writeResult->isAcknowledged();
-            })
-            ->map(function(BulkWriteResult $writeResult, int $i) use ($counts) {
-                return $writeResult->getInsertedIds()
-                    + $writeResult->getUpsertedIds()
-                    + array_fill(0, $counts[$i], null);
-            })
-            ->flatten()
-            ->map(function(?BSON\ObjectId $id) {
-                return isset($id) ? ['_id' => (string)$id] : [];
-            })
-            ->toArray();
+        /** @var Result $result */
+        $result = $this->getResultBuilder()->with($documents);
+        expect_type($result, Result::class, \UnexpectedValueException::class);
 
-        return new Result($ids, $meta);
+        return $result->withMeta($meta);
     }
 
-
     /**
-     * Query and update records.
+     * Check limit to select 'One' or 'Many' variant of method.
      *
-     * @param Collection                        $storage
-     * @param array                             $filter
-     * @param UpdateOperation|UpdateOperation[] $changes
-     * @param array                             $opts
-     * @return Result
+     * @param string   $method
+     * @param Option[] $opts
+     * @return void
      */
-    public function update($storage, array $filter, $changes, array $opts = []): Result
+    protected function oneOrMany(string $method, array $opts)
     {
-        $filterQuery = $this->getQueryBuilder()->buildQuery($filter, $opts);
-        expect_type($filterQuery, Query::class, \UnexpectedValueException::class);
+        /** @var LimitOption|null $limit */
+        $limit = Pipeline::with($opts)
+            ->filter(function($opt) {
+                return $opt instanceof LimitOption;
+            })
+            ->last();
 
-        $updateQuery = $this->getUpdateQueryBuilder()->buildQuery($filter, $opts);
-        expect_type($updateQuery, Query::class, \UnexpectedValueException::class);
+        if (isset($limit) && $limit->getLimit() !== 1) {
+            $limitNr = $limit->getLimit();
+            throw new InvalidOptionException("MongoDB can $method one document or all document, but not $limitNr");
+        }
 
-        $options = $updateQuery->getOptions() + $filterQuery->getOptions();
-
-        $updateResult = $storage->updateMany($filterQuery->toArray(), $updateQuery->toArray(), $options);
-
-        $meta = [
-            'matchedCount' => $updateResult->getMatchedCount(),
-            'modifiedCount' => $updateResult->getModifiedCount(),
-            'upsertedCount' => $updateResult->getUpsertedCount(),
-            'acknowledged' => $updateResult->isAcknowledged()
-        ];
-
-        return new Result([], $meta);
-    }
-
-
-    /**
-     * Query and delete records.
-     *
-     * @param Collection $storage
-     * @param array      $filter
-     * @param array      $opts
-     * @return Result
-     */
-    public function delete($storage, array $filter, array $opts = []): Result
-    {
-        $query = $this->getQueryBuilder()->buildQuery($filter, $opts);
-        expect_type($query, Query::class, \UnexpectedValueException::class);
-
-        $deleteResult = $storage->deleteMany($query->toArray(), $query->getOptions());
-
-        $meta = [
-            'deletedCount' => $deleteResult->getDeletedCount(),
-            'acknowledged' => $deleteResult->isAcknowledged()
-        ];
-
-        return new Result([], $meta);
+        return $method . (isset($limit) ? 'One' : 'Many');
     }
 }
