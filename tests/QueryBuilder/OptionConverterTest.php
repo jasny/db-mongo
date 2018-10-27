@@ -3,7 +3,7 @@
 namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 
 use Jasny\DB\Option as opt;
-use Jasny\DB\Option\QueryOptionInterface;
+use Jasny\DB\Option\QueryOption;
 use Jasny\DB\Mongo\QueryBuilder\OptionConverter;
 use PHPUnit\Framework\TestCase;
 
@@ -44,7 +44,7 @@ class OptionConverterTest extends TestCase
     /**
      * @dataProvider limitProvider
      */
-    public function testLimit($expected, QueryOptionInterface $option)
+    public function testLimit($expected, QueryOption $option)
     {
         $converter = new OptionConverter();
         $result = $converter->convert([$option]);
@@ -102,7 +102,7 @@ class OptionConverterTest extends TestCase
      */
     public function testUnsupportedOption()
     {
-        $option = $this->getMockBuilder(QueryOptionInterface::class)
+        $option = $this->getMockBuilder(QueryOption::class)
             ->setMockClassName('UnsupportedOption')
             ->disableOriginalConstructor()
             ->disableProxyingToOriginalMethods()

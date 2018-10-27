@@ -115,7 +115,7 @@ class UpdateComposerTest extends TestCase
 
     /**
      * @dataProvider invalidInfoProvider
-     * @expectedException \Jasny\DB\Exception\InvalidFilterException
+     * @expectedException \Jasny\DB\Exception\InvalidUpdateOperationException
      */
     public function testInvalidFieldName(string $field, string $operator, $value, string $exceptionMsg)
     {

@@ -6,7 +6,7 @@ use Improved\Iterator\CombineIterator;
 use Jasny\DB\Mongo\QueryBuilder\BuildStep;
 use Jasny\DB\Mongo\QueryBuilder\OptionConverter;
 use Jasny\DB\Mongo\QueryBuilder\Query;
-use Jasny\DB\Option\QueryOptionInterface;
+use Jasny\DB\Option\QueryOption;
 use Jasny\TestHelper;
 use PHPUnit\Framework\MockObject\Builder\InvocationMocker;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -21,7 +21,7 @@ class BuildStepTest extends TestCase
 
     public function test()
     {
-        $option = $this->createMock(QueryOptionInterface::class);
+        $option = $this->createMock(QueryOption::class);
         /** @var OptionConverter|MockObject $optionConverter */
         $optionConverter = $this->createMock(OptionConverter::class);
         $optionConverter->expects($this->once())->method('convert')

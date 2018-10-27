@@ -36,6 +36,14 @@ abstract class AbstractComposer
 
 
     /**
+     * Create a custom invalid argument exception.
+     *
+     * @param string $message
+     * @return \InvalidArgumentException
+     */
+    abstract protected function invalid(string $message): \InvalidArgumentException;
+
+    /**
      * Assert that the info can be understood and is safe.
      *
      * @param string $field
@@ -48,12 +56,12 @@ abstract class AbstractComposer
     {
         $name = $operator === '' ? $field : "$field ($operator)";
 
-        if ($field[0] === '$') {
-            throw new InvalidFilterException("Invalid field '$name': Starting with '$' isn't allowed.");
+        if (preg_match('/^\$|\.\$/', $field)) {
+            throw $this->invalid("Invalid field '$name': Starting with '$' isn't allowed.");
         }
 
         if (!array_key_exists($operator, static::OPERATORS)) {
-            throw new InvalidFilterException("Invalid field '$name': Unknown operator '$operator'.");
+            throw $this->invalid("Invalid field '$name': Unknown operator '$operator'.");
         }
 
         if (is_array($value) || (is_object($value) && !$value instanceof BSON\Type)) {
@@ -77,12 +85,13 @@ abstract class AbstractComposer
         }
 
         foreach ($element as $key => $value) {
-            if (is_string($key) && $key[0] === '$') {
-                $structure = is_object($element) ? 'object property' : 'array key';
-                $message = "Invalid filter value for '$name': "
-                    . "Illegal $structure '$key', starting with '$' isn't allowed.";
-
-                throw new InvalidFilterException($message);
+            if (is_string($key) && preg_match('/^\$|\.\$/', $key)) {
+                throw $this->invalid(sprintf(
+                    "Invalid filter value for '%s': Illegal %s '%s', starting with '$' isn't allowed.",
+                    $name,
+                    (is_object($element) ? 'object property' : 'array key'),
+                    $key
+                ));
             }
 
             if (is_array($value) || (is_object($value) && !$value instanceof BSON\Type)) {

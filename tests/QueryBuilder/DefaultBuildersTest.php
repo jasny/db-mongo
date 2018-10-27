@@ -5,19 +5,19 @@ namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\Option as opt;
 use Jasny\DB\Update as update;
-use Jasny\DB\Mongo\QueryBuilder\DefaultQueryBuilders;
+use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
 use Jasny\DB\QueryBuilder\StagedQueryBuilder;
 use MongoDB\BSON;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilder\DefaultQueryBuilders
+ * @covers \Jasny\DB\Mongo\QueryBuilder\DefaultBuilders
  */
-class DefaultQueryBuildersTest extends TestCase
+class DefaultBuildersTest extends TestCase
 {
     public function testCreateFilterQueryBuilder()
     {
-        $builder = DefaultQueryBuilders::createFilterQueryBuilder();
+        $builder = DefaultBuilders::createFilterQueryBuilder();
         $this->assertInstanceOf(StagedQueryBuilder::class, $builder);
 
         /** @var Query $query */
@@ -40,7 +40,7 @@ class DefaultQueryBuildersTest extends TestCase
 
     public function testCreateSaveQueryBuilder()
     {
-        $builder = DefaultQueryBuilders::createSaveQueryBuilder();
+        $builder = DefaultBuilders::createSaveQueryBuilder();
         $this->assertInstanceOf(StagedQueryBuilder::class, $builder);
 
         $batchesIterator = $builder->buildQuery([
@@ -63,7 +63,7 @@ class DefaultQueryBuildersTest extends TestCase
 
     public function testCreateUpdateQueryBuilder()
     {
-        $builder = DefaultQueryBuilders::createUpdateQueryBuilder();
+        $builder = DefaultBuilders::createUpdateQueryBuilder();
         $this->assertInstanceOf(StagedQueryBuilder::class, $builder);
 
         /** @var Query $query */

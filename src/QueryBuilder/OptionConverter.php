@@ -6,8 +6,7 @@ use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Exception\InvalidOptionException;
 use Jasny\DB\Option\FieldsOption;
 use Jasny\DB\Option\LimitOption;
-use Jasny\DB\Option\QueryOptionInterface;
-use function Jasny\expect_type;
+use Jasny\DB\Option\QueryOption;
 
 /**
  * Convert a query opts to a MongoDB options.
@@ -17,14 +16,14 @@ class OptionConverter
     /**
      * Convert a query opts to a MongoDB options.
      *
-     * @param QueryOptionInterface[] $opts
-     * @return array
+     * @param QueryOption[] $opts
+     * @return array<string, mixed>
      * @throws InvalidOptionException
      */
     public function convert(array $opts): array
     {
         return Pipeline::with($opts)
-            ->map(\Closure::fromCallable([$this, 'convertStandardOpt']))
+            ->map(\Closure::fromCallable([$this, 'convertOpt']))
             ->flatten(true)
             ->group(function($value, string $key) {
                 return $key;
@@ -40,8 +39,8 @@ class OptionConverter
     /**
      * Alias of `convert()`
      *
-     * @param QueryOptionInterface[] $opts
-     * @return array
+     * @param QueryOption[] $opts
+     * @return array<string, mixed>
      */
     final public function __invoke(array $opts): array
     {
@@ -52,11 +51,11 @@ class OptionConverter
     /**
      * Convert a standard Jasny DB opt to a MongoDB option.
      *
-     * @param QueryOptionInterface $opt
-     * @return array
+     * @param QueryOption $opt
+     * @return array<string, int>
      * @throws InvalidOptionException
      */
-    protected function convertStandardOpt(QueryOptionInterface $opt): array
+    protected function convertOpt(QueryOption $opt): array
     {
         if ($opt instanceof FieldsOption) {
             return $opt->getType() === 'sort'
@@ -76,7 +75,7 @@ class OptionConverter
      *
      * @param string   $type    ('fields', 'omit')
      * @param string[] $fields
-     * @return array
+     * @return array<string, array<string, int>>
      */
     protected function convertFields(string $type, array $fields): array
     {
@@ -84,14 +83,11 @@ class OptionConverter
             throw new InvalidOptionException("Unknown query option '$type'");
         }
 
-        $inc = $type === 'omit' ? -1 : 1;
-        $projection = [];
-
-        foreach ($fields as $field) {
-            expect_type($field, 'string', InvalidOptionException::class);
-
-            $projection[$field] = $inc;
-        }
+        $projection = Pipeline::with($fields)
+            ->expectType('string', new InvalidOptionException())
+            ->flip()
+            ->fill($type === 'omit' ? -1 : 1)
+            ->toArray();
 
         return ['projection' => $projection];
     }
@@ -100,19 +96,20 @@ class OptionConverter
      * Convert sort opt to MongoDB sort option.
      *
      * @param string[] $fields
-     * @return array
+     * @return array<string, array<string, int>>
      */
     protected function convertSort(array $fields): array
     {
-        $sort = [];
-
-        foreach ($fields as $field) {
-            expect_type($field, 'string', InvalidOptionException::class);
-
-            $asc = $field[0] === '~' ? -1 : 1;
-            $key = $asc === -1 ? substr($field, 1) : $field;
-            $sort[$key] = $asc;
-        }
+        $sort = Pipeline::with($fields)
+            ->expectType('string', new InvalidOptionException())
+            ->flip()
+            ->map(function($_, string $field) {
+                return $field[0] === '~' ? -1 : 1;
+            })
+            ->mapKeys(function(int $asc, string $field) {
+                return $asc < 0 ? substr($field, 1): $field;
+            })
+            ->toArray();
 
         return ['sort' => $sort];
     }

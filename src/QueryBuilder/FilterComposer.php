@@ -22,6 +22,17 @@ class FilterComposer extends AbstractComposer
         'all' => '$all'
     ];
 
+    /**
+     * Create a custom invalid argument exception.
+     *
+     * @param string $message
+     * @return InvalidFilterException
+     */
+    protected function invalid(string $message): \InvalidArgumentException
+    {
+        return new InvalidFilterException($message);
+    }
+
 
     /**
      * Default logic to apply a filter criteria.

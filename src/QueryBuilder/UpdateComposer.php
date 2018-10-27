@@ -2,8 +2,7 @@
 
 namespace Jasny\DB\Mongo\QueryBuilder;
 
-use MongoDB\BSON;
-use Jasny\DB\Exception\InvalidFilterException;
+use Jasny\DB\Exception\InvalidUpdateOperationException;
 use function Jasny\expect_type;
 
 /**
@@ -27,27 +26,40 @@ class UpdateComposer extends AbstractComposer
         'pull' => '$pullAll',
     ];
 
+    /**
+     * Create a custom invalid argument exception.
+     *
+     * @param string $message
+     * @return InvalidUpdateOperationException
+     */
+    protected function invalid(string $message): \InvalidArgumentException
+    {
+        return new InvalidUpdateOperationException($message);
+    }
+
 
     /**
      * Flatten all fields of an element.
      *
-     * @param iterable|object $element
-     * @param string          $path
+     * @param mixed  $element
+     * @param string $path
+     * @param array  $accumulator
      * @return array
      */
-    protected function flattenFields($element, $path = ''): array
+    protected function flattenFields($element, string $path, array &$accumulator = []): array
     {
-        $pairs = [];
+        if (!is_array($element) && !is_object($element)) {
+            $accumulator[$path] = $element;
+        } else {
+            foreach ($element as $key => $value) {
+                expect_type($key, 'string', \UnexpectedValueException::class);
 
-        foreach ($element as $key => $value) {
-            $field = $path === '' ? $key : "$path.$key";
-
-            $pairs[] = is_array($value) || (is_object($value) && !$value instanceof BSON\Type)
-                ? $this->flattenFields($value, $field)
-                : [$field => $value];
+                $field = ($path === '' ? $key : "$path.$key");
+                $this->flattenFields($value, $field, $accumulator); // recursion
+            }
         }
 
-        return array_merge(...$pairs);
+        return $accumulator;
     }
 
     /**
@@ -64,7 +76,7 @@ class UpdateComposer extends AbstractComposer
 
         switch($mongoOperator[0]) {
             case '>':
-                return [substr($mongoOperator, 1) => $this->flattenFields([$field => $value])];
+                return [substr($mongoOperator, 1) => $this->flattenFields($value, $field)];
             case '-':
                 expect_type($value, ['int', 'float'], \UnexpectedValueException::class);
                 return [substr($mongoOperator, 1) => [$field => -1 * $value]];
@@ -84,7 +96,7 @@ class UpdateComposer extends AbstractComposer
      * @param string $operator
      * @param mixed  $value
      * @return void
-     * @throws InvalidFilterException
+     * @throws \InvalidArgumentException
      */
     protected function apply(Query $query, string $field, string $operator, $value): void
     {

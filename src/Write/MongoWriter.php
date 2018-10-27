@@ -2,11 +2,13 @@
 
 namespace Jasny\DB\Mongo\Write;
 
-use Jasny\DB\Mongo\QueryBuilder\DefaultQueryBuilders;
+use Improved\IteratorPipeline\Pipeline;
+use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
 use Jasny\DB\Mongo\QueryBuilder\Query;
-use Jasny\DB\QueryBuilder\QueryBuilderInterface;
-use Jasny\DB\Write\WriterInterface;
-use Jasny\DB\Result\Result;
+use Jasny\DB\QueryBuilder\QueryBuilding;
+use Jasny\DB\Update\UpdateOperation;
+use Jasny\DB\Write;
+use Jasny\DB\Result;
 use MongoDB\BSON;
 use MongoDB\BulkWriteResult;
 use MongoDB\Collection;
@@ -15,7 +17,7 @@ use function Jasny\expect_type;
 /**
  * Fetch data from a MongoDB collection
  */
-class MongoWriter implements WriterInterface
+class MongoWriter implements Write, Write\WithBuilders
 {
     /**
      * Meta data for save action
@@ -31,17 +33,17 @@ class MongoWriter implements WriterInterface
 
 
     /**
-     * @var QueryBuilderInterface
+     * @var QueryBuilding
      */
     protected $queryBuilder;
 
     /**
-     * @var QueryBuilderInterface
+     * @var QueryBuilding
      */
     protected $saveQueryBuilder;
 
     /**
-     * @var QueryBuilderInterface
+     * @var QueryBuilding
      */
     protected $updateQueryBuilder;
 
@@ -49,12 +51,12 @@ class MongoWriter implements WriterInterface
     /**
      * Get the query builder.
      *
-     * @return QueryBuilderInterface
+     * @return QueryBuilding
      */
-    public function getQueryBuilder(): QueryBuilderInterface
+    public function getQueryBuilder(): QueryBuilding
     {
         if (!isset($this->queryBuilder)) {
-            $this->queryBuilder = DefaultQueryBuilders::filter();
+            $this->queryBuilder = DefaultBuilders::createFilterQueryBuilder();
         }
 
         return $this->queryBuilder;
@@ -63,10 +65,10 @@ class MongoWriter implements WriterInterface
     /**
      * Create a reader with a custom query builder.
      *
-     * @param QueryBuilderInterface $queryBuilder
+     * @param QueryBuilding $queryBuilder
      * @return static
      */
-    public function withQueryBuilder(QueryBuilderInterface $queryBuilder): self
+    public function withQueryBuilder(QueryBuilding $queryBuilder): self
     {
         if ($this->queryBuilder === $queryBuilder) {
             return $this;
@@ -82,12 +84,12 @@ class MongoWriter implements WriterInterface
     /**
      * Get the query builder for saving new items
      *
-     * @return QueryBuilderInterface
+     * @return QueryBuilding
      */
-    public function getSaveQueryBuilder(): QueryBuilderInterface
+    public function getSaveQueryBuilder(): QueryBuilding
     {
         if (!isset($this->saveQueryBuilder)) {
-            $this->saveQueryBuilder = DefaultQueryBuilders::save();
+            $this->saveQueryBuilder = DefaultBuilders::createSaveQueryBuilder();
         }
 
         return $this->saveQueryBuilder;
@@ -96,10 +98,10 @@ class MongoWriter implements WriterInterface
     /**
      * Create a reader with a custom query builder.
      *
-     * @param QueryBuilderInterface $queryBuilder
+     * @param QueryBuilding $queryBuilder
      * @return static
      */
-    public function withSaveQueryBuilder(QueryBuilderInterface $queryBuilder): self
+    public function withSaveQueryBuilder(QueryBuilding $queryBuilder): self
     {
         if ($this->saveQueryBuilder === $queryBuilder) {
             return $this;
@@ -115,12 +117,12 @@ class MongoWriter implements WriterInterface
     /**
      * Get the query builder of updating items.
      *
-     * @return QueryBuilderInterface
+     * @return QueryBuilding
      */
-    public function getUpdateQueryBuilder(): QueryBuilderInterface
+    public function getUpdateQueryBuilder(): QueryBuilding
     {
         if (!isset($this->updateQueryBuilder)) {
-            $this->updateQueryBuilder = DefaultQueryBuilders::update();
+            $this->updateQueryBuilder = DefaultBuilders::createUpdateQueryBuilder();
         }
 
         return $this->updateQueryBuilder;
@@ -129,10 +131,10 @@ class MongoWriter implements WriterInterface
     /**
      * Create a reader with a custom query builder.
      *
-     * @param QueryBuilderInterface $queryBuilder
+     * @param QueryBuilding $queryBuilder
      * @return static
      */
-    public function withUpdateQueryBuilder(QueryBuilderInterface $queryBuilder): self
+    public function withUpdateQueryBuilder(QueryBuilding $queryBuilder): self
     {
         if ($this->updateQueryBuilder === $queryBuilder) {
             return $this;
@@ -152,7 +154,7 @@ class MongoWriter implements WriterInterface
      * @param Collection $storage
      * @param iterable   $items
      * @param array      $opts
-     * @return Result
+     * @return Result&iterable<array>
      */
     public function save($storage, iterable $items, array $opts = []): Result
     {
@@ -174,32 +176,33 @@ class MongoWriter implements WriterInterface
      *
      * @param BulkWriteResult[] $writeResults
      * @param int[]             $counts
-     * @return Result
+     * @return Result&iterable<array>
      */
     protected function combineWriteResults(array $writeResults, array $counts): Result
     {
-        $ids = [];
         $meta = self::SAVE_META;
 
-        foreach ($writeResults as $i => $writeResult) {
-            $ids[] = $writeResult->getInsertedIds()
-                + $writeResult->getUpsertedIds()
-                + array_fill(0, $counts[$i], null);
-
-            $meta['deletedCount'] += $writeResult->getDeletedCount();
-            $meta['insertedCount'] += $writeResult->getInsertedCount();
-            $meta['matchedCount'] += $writeResult->getMatchedCount();
-            $meta['modifiedCount'] += $writeResult->getModifiedCount();
-            $meta['upsertedCount'] += $writeResult->getUpsertedCount();
-            $meta['acknowledged'] = $meta['acknowledged'] && $writeResult->isAcknowledged();
-        }
-
-        return (new Result($ids, $meta))
+        $ids = Pipeline::with($writeResults)
+            ->apply(function(BulkWriteResult $writeResult) use (&$meta) {
+                $meta['deletedCount'] += $writeResult->getDeletedCount();
+                $meta['insertedCount'] += $writeResult->getInsertedCount();
+                $meta['matchedCount'] += $writeResult->getMatchedCount();
+                $meta['modifiedCount'] += $writeResult->getModifiedCount();
+                $meta['upsertedCount'] += $writeResult->getUpsertedCount();
+                $meta['acknowledged'] = $meta['acknowledged'] && $writeResult->isAcknowledged();
+            })
+            ->map(function(BulkWriteResult $writeResult, int $i) use ($counts) {
+                return $writeResult->getInsertedIds()
+                    + $writeResult->getUpsertedIds()
+                    + array_fill(0, $counts[$i], null);
+            })
             ->flatten()
-            ->values()
             ->map(function(?BSON\ObjectId $id) {
-                return isset($id) ? (string)$id : null;
-            });
+                return isset($id) ? ['_id' => (string)$id] : [];
+            })
+            ->toArray();
+
+        return new Result($ids, $meta);
     }
 
 
@@ -248,7 +251,7 @@ class MongoWriter implements WriterInterface
         $query = $this->getQueryBuilder()->buildQuery($filter, $opts);
         expect_type($query, Query::class, \UnexpectedValueException::class);
 
-        $deleteResult = $storage->deleteMany($storage, $query->toArray(), $query->getOptions());
+        $deleteResult = $storage->deleteMany($query->toArray(), $query->getOptions());
 
         $meta = [
             'deletedCount' => $deleteResult->getDeletedCount(),

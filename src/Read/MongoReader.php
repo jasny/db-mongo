@@ -3,21 +3,21 @@
 namespace Jasny\DB\Mongo\Read;
 
 use Improved\IteratorPipeline\PipelineBuilder;
-use Jasny\DB\Mongo\QueryBuilder\QueryBuilderFactory;
-use Jasny\DB\Mongo\TypeConversion\CastToPHP;
-use Jasny\DB\QueryBuilder\QueryBuilderInterface;
-use Jasny\DB\Read\ReaderInterface;
-use Jasny\DB\Read\Result;
+use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
+use Jasny\DB\Mongo\QueryBuilder\Query;
+use Jasny\DB\QueryBuilder\QueryBuilding;
+use Jasny\DB\Read;
+use Jasny\DB\Result;
 use MongoDB\Collection;
 use function Jasny\expect_type;
 
 /**
  * Fetch data from a MongoDB collection
  */
-class MongoReader implements ReaderInterface
+class MongoReader implements Read, Read\WithBuilders
 {
     /**
-     * @var QueryBuilderInterface
+     * @var QueryBuilding
      */
     protected $queryBuilder;
 
@@ -30,12 +30,12 @@ class MongoReader implements ReaderInterface
     /**
      * Get the query builder.
      *
-     * @return QueryBuilderInterface
+     * @return QueryBuilding
      */
-    public function getQueryBuilder(): QueryBuilderInterface
+    public function getQueryBuilder(): QueryBuilding
     {
         if (!isset($this->queryBuilder)) {
-            $this->queryBuilder = new QueryBuilderFactory();
+            $this->queryBuilder = DefaultBuilders::createFilterQueryBuilder();
         }
 
         return $this->queryBuilder;
@@ -44,10 +44,10 @@ class MongoReader implements ReaderInterface
     /**
      * Create a reader with a custom query builder.
      *
-     * @param QueryBuilderInterface $queryBuilder
+     * @param QueryBuilding $queryBuilder
      * @return static
      */
-    public function withQueryBuilder(QueryBuilderInterface $queryBuilder): self
+    public function withQueryBuilder(QueryBuilding $queryBuilder): self
     {
         if ($this->queryBuilder === $queryBuilder) {
             return $this;
@@ -68,12 +68,7 @@ class MongoReader implements ReaderInterface
     public function getResultBuilder(): PipelineBuilder
     {
         if (!isset($this->resultBuilder)) {
-            $this->resultBuilder = (new PipelineBuilder)
-                ->then(function (iterable $iterable) {
-                    return new Result($iterable);
-                })
-                ->then(new FieldMap(['_id' => 'id']))
-                ->then(new CastToPHP());
+            $this->resultBuilder = DefaultBuilders::createResultBuilder();
         }
 
         return $this->resultBuilder;
@@ -83,9 +78,9 @@ class MongoReader implements ReaderInterface
      * Create a reader with a custom result builder.
      *
      * @param PipelineBuilder $resultBuilder
-     * @return mixed
+     * @return static
      */
-    public function withResultBuilder(PipelineBuilder $resultBuilder)
+    public function withResultBuilder(PipelineBuilder $resultBuilder): self
     {
         if ($this->resultBuilder === $resultBuilder) {
             return $this;
@@ -108,7 +103,7 @@ class MongoReader implements ReaderInterface
      */
     public function count($storage, array $filter = null, array $opts = []): int
     {
-        expect_type($storage, Collection::class);
+        expect_type($storage, Collection::class, \InvalidArgumentException::class);
 
         $query = $this->queryBuilder->buildQuery($filter ?? [], $opts);
         expect_type($query, Query::class, \UnexpectedValueException::class);
@@ -126,13 +121,15 @@ class MongoReader implements ReaderInterface
      */
     public function fetch($storage, array $filter = null, array $opts = []): Result
     {
-        expect_type($storage, Collection::class);
+        expect_type($storage, Collection::class, \InvalidArgumentException::class);
 
+        /** @var Query $result */
         $query = $this->queryBuilder->buildQuery($filter ?? [], $opts);
         expect_type($query, Query::class, \UnexpectedValueException::class);
 
         $cursor = $storage->find($query->getConditions(), $query->getOptions());
 
+        /** @var Result $result */
         $result = $this->resultBuilder->with($cursor);
         expect_type($query, Result::class, \UnexpectedValueException::class);
 
