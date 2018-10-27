@@ -3,9 +3,9 @@
 namespace Jasny\DB\Mongo\Read;
 
 use Improved\IteratorPipeline\PipelineBuilder;
-use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
-use Jasny\DB\Mongo\QueryBuilder\Query;
-use Jasny\DB\QueryBuilder\QueryBuilding;
+use Jasny\DB\Mongo\QueryBuilding\DefaultBuilders;
+use Jasny\DB\Mongo\QueryBuilding\Query;
+use Jasny\DB\QueryBuilding;
 use Jasny\DB\Read;
 use Jasny\DB\Result;
 use MongoDB\Collection;

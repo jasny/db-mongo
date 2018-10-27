@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilder;
+namespace Jasny\DB\Mongo\QueryBuilding;
 
 use Improved\IteratorPipeline\Pipeline;
 

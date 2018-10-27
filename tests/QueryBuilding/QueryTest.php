@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Tests\QueryBuilder;
+namespace Jasny\DB\Mongo\Tests\QueryBuilding;
 
-use Jasny\DB\Mongo\QueryBuilder\Query;
+use Jasny\DB\Mongo\QueryBuilding\Query;
 use PHPUnit\Framework\TestCase;
 
 class QueryTest extends TestCase

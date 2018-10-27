@@ -1,17 +1,21 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilder;
+namespace Jasny\DB\Mongo\QueryBuilding;
 
 use Improved as i;
 use const Improved\FUNCTION_ARGUMENT_PLACEHOLDER as __;
 use Improved\IteratorPipeline\PipelineBuilder;
 use Jasny\DB\FieldMap\ConfiguredFieldMap;
+use Jasny\DB\Mongo\QueryBuilding\Step\BuildStep;
+use Jasny\DB\Mongo\QueryBuilding\Step\FilterComposer;
+use Jasny\DB\Mongo\QueryBuilding\Step\SaveQueryBuildStep;
+use Jasny\DB\Mongo\QueryBuilding\Step\UpdateComposer;
 use Jasny\DB\Mongo\TypeConversion\CastToMongo;
 use Jasny\DB\Mongo\TypeConversion\CastToPHP;
-use Jasny\DB\QueryBuilder\FilterParser;
-use Jasny\DB\QueryBuilder\StagedQueryBuilder;
+use Jasny\DB\QueryBuilding\StagedQueryBuilder;
+use Jasny\DB\QueryBuilding\Step\FilterParser;
+use Jasny\DB\QueryBuilding\Step\UpdateParser;
 use Jasny\DB\Result;
-use Jasny\DB\Update\UpdateParser;
 
 /**
  * Default query and result builders.
@@ -19,9 +23,7 @@ use Jasny\DB\Update\UpdateParser;
 final class DefaultBuilders
 {
     /**
-     * Create a new Cursor
-     * MongoDB\Driver\Cursor objects are returned as the result of an executed command or query and cannot be constructed directly.
-     * @link https://php.net/manual/en/mongodb-driver-cursor.construct.php
+     * Static class.
      */
     final private function __construct()
     {

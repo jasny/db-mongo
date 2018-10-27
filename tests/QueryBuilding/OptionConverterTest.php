@@ -1,14 +1,14 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Tests\QueryBuilder;
+namespace Jasny\DB\Mongo\Tests\QueryBuilding;
 
+use Jasny\DB\Option;
 use Jasny\DB\Option as opt;
-use Jasny\DB\Option\QueryOption;
-use Jasny\DB\Mongo\QueryBuilder\OptionConverter;
+use Jasny\DB\Mongo\QueryBuilding\OptionConverter;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilder\OptionConverter
+ * @covers \Jasny\DB\Mongo\QueryBuilding\OptionConverter
  */
 class OptionConverterTest extends TestCase
 {
@@ -44,7 +44,7 @@ class OptionConverterTest extends TestCase
     /**
      * @dataProvider limitProvider
      */
-    public function testLimit($expected, QueryOption $option)
+    public function testLimit($expected, Option $option)
     {
         $converter = new OptionConverter();
         $result = $converter->convert([$option]);
@@ -102,7 +102,7 @@ class OptionConverterTest extends TestCase
      */
     public function testUnsupportedOption()
     {
-        $option = $this->getMockBuilder(QueryOption::class)
+        $option = $this->getMockBuilder(Option::class)
             ->setMockClassName('UnsupportedOption')
             ->disableOriginalConstructor()
             ->disableProxyingToOriginalMethods()

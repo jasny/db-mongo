@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Tests\QueryBuilder;
+namespace Jasny\DB\Mongo\Tests\QueryBuilding\Step;
 
 use Improved as i;
-use Jasny\DB\Mongo\QueryBuilder\SaveQueryBuildStep;
+use Jasny\DB\Mongo\QueryBuilding\Step\SaveQueryBuildStep;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilder\SaveQueryBuildStep
+ * @covers \Jasny\DB\Mongo\QueryBuilding\Step\SaveQueryBuildStep
  */
 class SaveQueryBuildStepTest extends TestCase
 {

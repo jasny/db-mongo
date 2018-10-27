@@ -2,7 +2,9 @@
 
 namespace Jasny\DB\Mongo\Tests\Writer;
 
+use Improved\IteratorPipeline\PipelineBuilder;
 use Jasny\DB\Mongo\Write\MongoWriter;
+use Jasny\DB\QueryBuilding;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -10,6 +12,36 @@ use PHPUnit\Framework\TestCase;
  */
 class MongoWriterTest extends TestCase
 {
+    /**
+     * @var MongoReader
+     */
+    protected $reader;
+
+    /**
+     * @var QueryBuilding|MockObject
+     */
+    protected $filterQueryBuilder;
+
+    /**
+     * @var QueryBuilding|MockObject
+     */
+    protected $updateQueryBuilder;
+
+    /**
+     * @var QueryBuilding|MockObject
+     */
+    protected $saveQueryBuilder;
+
+
+    public function setUp()
+    {
+        $this->queryBuilder = $this->createMock(QueryBuilding::class);
+
+        $this->reader = (new MongoWriter)
+            ->withQueryBuilder($this->queryBuilder);
+    }
+
+
     public function testWithSaveQueryBuilder()
     {
         $this->markTestIncomplete();

@@ -1,12 +1,12 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilder;
+namespace Jasny\DB\Mongo\QueryBuilding;
 
 use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Exception\InvalidOptionException;
 use Jasny\DB\Option\FieldsOption;
 use Jasny\DB\Option\LimitOption;
-use Jasny\DB\Option\QueryOption;
+use Jasny\DB\Option;
 
 /**
  * Convert a query opts to a MongoDB options.
@@ -16,7 +16,7 @@ class OptionConverter
     /**
      * Convert a query opts to a MongoDB options.
      *
-     * @param QueryOption[] $opts
+     * @param Option[] $opts
      * @return array<string, mixed>
      * @throws InvalidOptionException
      */
@@ -39,7 +39,7 @@ class OptionConverter
     /**
      * Alias of `convert()`
      *
-     * @param QueryOption[] $opts
+     * @param Option[] $opts
      * @return array<string, mixed>
      */
     final public function __invoke(array $opts): array
@@ -51,11 +51,11 @@ class OptionConverter
     /**
      * Convert a standard Jasny DB opt to a MongoDB option.
      *
-     * @param QueryOption $opt
+     * @param Option $opt
      * @return array<string, int>
      * @throws InvalidOptionException
      */
-    protected function convertOpt(QueryOption $opt): array
+    protected function convertOpt(Option $opt): array
     {
         if ($opt instanceof FieldsOption) {
             return $opt->getType() === 'sort'

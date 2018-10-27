@@ -3,9 +3,9 @@
 namespace Jasny\DB\Mongo\Write;
 
 use Improved\IteratorPipeline\Pipeline;
-use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
-use Jasny\DB\Mongo\QueryBuilder\Query;
-use Jasny\DB\QueryBuilder\QueryBuilding;
+use Jasny\DB\Mongo\QueryBuilding\DefaultBuilders;
+use Jasny\DB\Mongo\QueryBuilding\Query;
+use Jasny\DB\QueryBuilding;
 use Jasny\DB\Update\UpdateOperation;
 use Jasny\DB\Write;
 use Jasny\DB\Result;

@@ -1,8 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilder;
+namespace Jasny\DB\Mongo\QueryBuilding\Step;
 
 use Improved\IteratorPipeline\Pipeline;
+use Jasny\DB\Mongo\QueryBuilding\OptionConverter;
+use Jasny\DB\Mongo\QueryBuilding\Query;
 use Jasny\DB\Option\QueryOption;
 
 /**

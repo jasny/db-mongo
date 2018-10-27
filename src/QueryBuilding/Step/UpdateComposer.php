@@ -1,8 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilder;
+namespace Jasny\DB\Mongo\QueryBuilding\Step;
 
 use Jasny\DB\Exception\InvalidUpdateOperationException;
+use Jasny\DB\Mongo\QueryBuilding\Query;
 use function Jasny\expect_type;
 
 /**

@@ -1,16 +1,16 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Tests\QueryBuilder;
+namespace Jasny\DB\Mongo\Tests\QueryBuilding\Step;
 
 use Improved as i;
 use Improved\Iterator\CombineIterator;
-use Jasny\DB\Mongo\QueryBuilder\FilterComposer;
-use Jasny\DB\Mongo\QueryBuilder\Query;
+use Jasny\DB\Mongo\QueryBuilding\Step\FilterComposer;
+use Jasny\DB\Mongo\QueryBuilding\Query;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilder\AbstractComposer
- * @covers \Jasny\DB\Mongo\QueryBuilder\FilterComposer
+ * @covers \Jasny\DB\Mongo\QueryBuilding\Step\AbstractComposer
+ * @covers \Jasny\DB\Mongo\QueryBuilding\Step\FilterComposer
  */
 class FilterComposerTest extends TestCase
 {

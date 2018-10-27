@@ -1,17 +1,17 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Tests\QueryBuilder;
+namespace Jasny\DB\Mongo\Tests\QueryBuilding;
 
-use Jasny\DB\Mongo\QueryBuilder\Query;
+use Jasny\DB\Mongo\QueryBuilding\Query;
 use Jasny\DB\Option as opt;
 use Jasny\DB\Update as update;
-use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
-use Jasny\DB\QueryBuilder\StagedQueryBuilder;
+use Jasny\DB\Mongo\QueryBuilding\DefaultBuilders;
+use Jasny\DB\QueryBuilding\StagedQueryBuilder;
 use MongoDB\BSON;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilder\DefaultBuilders
+ * @covers \Jasny\DB\Mongo\QueryBuilding\DefaultBuilders
  */
 class DefaultBuildersTest extends TestCase
 {
