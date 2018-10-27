@@ -95,6 +95,15 @@ class MongoWriterTest extends TestCase
         $this->assertEquals(DefaultBuilders::createSaveQueryBuilder(), $builder);
     }
 
+    public function testGetResultBuilder()
+    {
+        $writer = new MongoWriter();
+        $builder = $writer->getResultBuilder();
+
+        $this->assertInstanceOf(PipelineBuilder::class, $builder);
+        $this->assertEquals(DefaultBuilders::createResultBuilder(), $builder);
+    }
+
 
     public function testWithQueryBuilder()
     {
@@ -107,6 +116,8 @@ class MongoWriterTest extends TestCase
         $this->assertNotSame($this->writer, $writer);
 
         $this->assertSame($builder, $writer->getQueryBuilder());
+
+        $this->assertSame($writer, $writer->withQueryBuilder($builder), 'Idempotent');
     }
 
     public function testWithUpdateQueryBuilder()
@@ -120,6 +131,8 @@ class MongoWriterTest extends TestCase
         $this->assertNotSame($this->writer, $writer);
 
         $this->assertSame($builder, $writer->getUpdateQueryBuilder());
+
+        $this->assertSame($writer, $writer->withUpdateQueryBuilder($builder), 'Idempotent');
     }
 
     public function testWithSaveQueryBuilder()
@@ -133,8 +146,25 @@ class MongoWriterTest extends TestCase
         $this->assertNotSame($this->writer, $writer);
 
         $this->assertSame($builder, $writer->getSaveQueryBuilder());
+
+        $this->assertSame($writer, $writer->withSaveQueryBuilder($builder), 'Idempotent');
     }
 
+    public function testWithResultBuilder()
+    {
+        $builder = new PipelineBuilder();
+
+        $writer = $this->writer->withResultBuilder($builder);
+
+        $this->assertInstanceOf(MongoWriter::class, $writer);
+        $this->assertNotSame($this->writer, $writer);
+
+        $this->assertSame($builder, $writer->getResultBuilder());
+
+        $this->assertSame($writer, $writer->withResultBuilder($builder), 'Idempotent');
+    }
+
+    
     public function documentsProvider()
     {
         $documents = [
@@ -355,5 +385,22 @@ class MongoWriterTest extends TestCase
         $this->assertInstanceOf(Result::class, $result);
         $this->assertEquals($expectedResult->toArray(), $result->toArray());
         $this->assertEquals($expectedMeta, $result->getMeta());
+    }
+
+
+    /**
+     * @expectedException \Jasny\DB\Exception\InvalidOptionException
+     * @expectedExceptionMessage MongoDB can update one document or all documents, but not exactly 7
+     */
+    public function testUpdateSeven()
+    {
+        $this->filterQueryBuilder->expects($this->once())->method('buildQuery')->willReturn(new Query());
+        $this->updateQueryBuilder->expects($this->once())->method('buildQuery')->willReturn(new Query());
+
+        $collection = $this->createMock(Collection::class);
+        $collection->expects($this->never())->method("deleteOne");
+        $collection->expects($this->never())->method("deleteMany");
+
+        $this->writer->update($collection, [], [], [opt\limit(7)]);
     }
 }

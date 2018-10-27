@@ -75,6 +75,8 @@ class MongoReaderTest extends TestCase
         $this->assertNotSame($this->reader, $reader);
 
         $this->assertSame($builder, $reader->getQueryBuilder());
+
+        $this->assertSame($reader, $reader->withQueryBuilder($builder), 'Idempotent');
     }
 
     public function testWithResultBuilder()
@@ -87,6 +89,8 @@ class MongoReaderTest extends TestCase
         $this->assertNotSame($this->reader, $reader);
 
         $this->assertSame($builder, $reader->getResultBuilder());
+
+        $this->assertSame($reader, $reader->withResultBuilder($builder), 'Idempotent');
     }
 
 

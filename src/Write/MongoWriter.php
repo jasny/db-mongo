@@ -214,8 +214,8 @@ class MongoWriter implements Write, Write\WithBuilders
             ->last();
 
         if (isset($limit) && $limit->getLimit() !== 1) {
-            $limitNr = $limit->getLimit();
-            throw new InvalidOptionException("MongoDB can $method one document or all document, but not $limitNr");
+            $msg = "MongoDB can $method one document or all documents, but not exactly " . $limit->getLimit();
+            throw new InvalidOptionException($msg);
         }
 
         return $method . (isset($limit) ? 'One' : 'Many');

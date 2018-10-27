@@ -24,6 +24,7 @@ final class DefaultBuilders
 {
     /**
      * Static class.
+     * @codeCoverageIgnore
      */
     final private function __construct()
     {
@@ -81,7 +82,7 @@ final class DefaultBuilders
     public static function createResultBuilder(): PipelineBuilder
     {
         return (new PipelineBuilder)
-            ->then(new ConfiguredFieldMap(['_id' => 'id']))
+            ->map(new ConfiguredFieldMap(['_id' => 'id']))
             ->then(new CastToPHP())
             ->then(function (iterable $iterable) {
                 return new Result($iterable);

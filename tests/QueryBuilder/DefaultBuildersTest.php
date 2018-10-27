@@ -4,6 +4,7 @@ namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 
 use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\Option as opt;
+use Jasny\DB\Result;
 use Jasny\DB\Update as update;
 use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
 use Jasny\DB\QueryBuilder\StagedQueryBuilder;
@@ -82,5 +83,43 @@ class DefaultBuildersTest extends TestCase
         $expected = ['$set' => ['_id' => 10, 'foo' => 42, 'bar.one' => 1, 'bar.two' => 2], '$inc' => ['count' => 1]];
         $this->assertEquals($expected, $query->toArray());
         $this->assertEquals(['limit' => 1], $query->getOptions());
+    }
+
+
+    public function documentProvider()
+    {
+        $documents = [
+            ['foo' => 'bar'],
+            ['_id' => 1, 'foo' => 'bar'],
+            ['_id' => new BSON\ObjectId('5a2493c33c95a1281836eb6a')],
+            ['date' => new BSON\UTCDateTime(strtotime('2000-01-01') * 1000)],
+        ];
+
+        $expected = [
+            ['foo' => 'bar'],
+            ['id' => 1, 'foo' => 'bar'],
+            ['id' => '5a2493c33c95a1281836eb6a'],
+            ['date' => new \DateTimeImmutable('2000-01-01')],
+        ];
+
+        return [
+            [$documents, $expected],
+            [new \ArrayIterator($documents), $expected],
+            [new \ArrayObject($documents), $expected],
+            [\SplFixedArray::fromArray(array_values($documents)), $expected]
+        ];
+    }
+
+    /**
+     * @dataProvider documentProvider
+     */
+    public function testCreateResultBuilder(iterable $documents, $expected)
+    {
+        $builder = DefaultBuilders::createResultBuilder();
+
+        $result = $builder->with($documents);
+
+        $this->assertInstanceOf(Result::class, $result);
+        $this->assertEquals($expected, $result->toArray());
     }
 }
