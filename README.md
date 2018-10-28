@@ -7,18 +7,12 @@ Jasny DB Mongo
 [![Packagist Stable Version](https://img.shields.io/packagist/v/jasny/db-mongo.svg)](https://packagist.org/packages/jasny/db-mongo)
 [![Packagist License](https://img.shields.io/packagist/l/jasny/db-mongo.svg)](https://packagist.org/packages/jasny/db-mongo)
 
-Database abstraction layer that doesn't wrap and shield underlying the PHP MongoDB driver.
+MongoDB implementation of [Jasny DB](https://github.com/jasny/db).
+
+Jasny DB is a database abstraction layer that doesn't wrap and shield underlying the PHP driver.
 
 The library provides services that allow the user to abstract DB access, while still having access to all capabilities
 of the underlying db / storage.
-
-Other abstraction layers force the user to use SQL like builders or (string) SQL dialects. These are only able to
-formulate very generic queries. When you actively choose for a DBMS (MongoDB, MySQL, Postgres) you want to use the
-features that system has, and not for it to be abstracted away into a grey mass.
-
-With Jasny DB some basic logic is included. The rest needs to be defined by you as developer. If you need to switch DB,
-add cache etc, this custom logic might still need to be rewritten. But now it's all in one place instead spread over the
-app.  
 
 _All objects are immutable._
 
@@ -40,7 +34,7 @@ use Jasny\DB\Option as opts;
 use Jasny\DB\Mongo\Read\MongoReader;
 
 $users = (new MongoDB\Client)->test->users;
-$reader = new MongoReader;
+$reader = new MongoReader();
 
 $list = $reader
     ->fetch(
@@ -67,8 +61,8 @@ use Jasny\DB\Mongo\Read\MongoReader;
 use Jasny\DB\Mongo\Write\MongoWriter;
 
 $users = (new MongoDB\Client)->test->users;
-$reader = new MongoReader;
-$writer = new MongoWriter;
+$reader = new MongoReader();
+$writer = new MongoWriter();
 
 $user = $reader->fetch($users, ['id' => '12345'])->first();
 $user->count = "bar";
