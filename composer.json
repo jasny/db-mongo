@@ -1,7 +1,7 @@
 {
     "name": "jasny/db-mongo",
     "type": "library",
-    "description": "Adds modern OOP DB patterns to the Mongo PHP extension",
+    "description": "Service based DB abstraction layer (MongoDB)",
     "keywords": ["database", "db", "mongo", "mongodb"],
     "license": "MIT",
     "homepage": "http://jasny.github.com/db-mongo",
@@ -17,7 +17,7 @@
         "source": "https://github.com/jasny/db-mongo"
     },
     "require": {
-        "php": ">=7.1.0",
+        "php": ">=7.2.0",
         "ext-mongodb": "^1.4.0",
         "ext-json": "*",
         "mongodb/mongodb": "^1.3",

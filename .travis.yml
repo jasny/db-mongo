@@ -1,12 +1,14 @@
 language: php
 
 php:
-  - 7.1
   - 7.2
+  - 7.3
+  - 7.4snapshot
   - nightly
 
 matrix:
   allow_failures:
+    - php: 7.4snapshot
     - php: nightly
 
 sudo: false
@@ -20,7 +22,6 @@ branches:
     - master
 
 before_install:
-  - pecl install mongodb
   - composer self-update
 
 install:
@@ -32,4 +33,3 @@ script:
 
 after_success:
   - php "$HOME/ocular.phar" code-coverage:upload --format=php-clover cache/logs/clover.xml
-
