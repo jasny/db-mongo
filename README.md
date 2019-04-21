@@ -160,7 +160,7 @@ This library defines the concept of options and a number of common options.
 * `limit(int limit, int offset = 0)`
 * `page(int pageNr, int pageSize)` _(pagination is 1-indexed)_
 
-For sorting, add a `~` in front of the field to sort in descending order.
+For **sorting**, add a `~` in front of the field to sort in **descending order**.
 
 Jasny DB implementations may define additional options.
 
@@ -293,7 +293,7 @@ To prevent accidentally swapping the changes and filter, passing a normal associ
 
 If you want to update every record of the storage (table, collection, etc) you have to supply an empty array as filter.
 
-To update a single document, you can pass `opt\limit(1)`. Trying to set a limit that isn't exactly one will lead to an
+To update a single document, you can pass `opts\limit(1)`. Trying to set a limit that isn't exactly one will lead to an
 error.
 
 ### delete
@@ -304,7 +304,7 @@ Query and delete records.
 
 If you want to update every record of the storage (table, collection, etc) you have to supply an empty array as filter.
 
-To update a single document, you can pass `opt\limit(1)`. Trying to set a limit that isn't exactly one will lead to an
+To delete a single document, you can pass `opts\limit(1)`. Trying to set a limit that isn't exactly one will lead to an
 error.
 
 ## Customization
@@ -327,3 +327,4 @@ query builder and result builder.
 ### Model
 
 **TODO**
+
