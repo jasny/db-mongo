@@ -2,6 +2,7 @@
 
 namespace Jasny\DB\Mongo\Write\Traits;
 
+use Improved as i;
 use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\QueryBuilder;
 use Jasny\DB\Update\UpdateOperation;
@@ -9,7 +10,7 @@ use Jasny\DB\Result;
 use Jasny\DB\Option;
 use MongoDB\Collection;
 use MongoDB\UpdateResult;
-use function Jasny\expect_type;
+use UnexpectedValueException;
 
 /**
  * Update data of a MongoDB collection.
@@ -44,9 +45,9 @@ trait UpdateTrait
      *
      * @param string   $method
      * @param Option[] $opts
-     * @return void
+     * @return string
      */
-    abstract protected function oneOrMany(string $method, array $opts);
+    abstract protected function oneOrMany(string $method, array $opts): string;
 
 
     /**
@@ -60,11 +61,19 @@ trait UpdateTrait
      */
     public function update($storage, array $filter, $changes, array $opts = []): Result
     {
-        $filterQuery = $this->getQueryBuilder()->buildQuery($filter, $opts);
-        expect_type($filterQuery, Query::class, \UnexpectedValueException::class);
+        /** @var Query $filterQuery */
+        $filterQuery = i\type_check(
+            $this->getQueryBuilder()->buildQuery($filter, $opts),
+            Query::class,
+            new UnexpectedValueException()
+        );
 
-        $updateQuery = $this->getUpdateQueryBuilder()->buildQuery($changes, $opts);
-        expect_type($updateQuery, Query::class, \UnexpectedValueException::class);
+        /** @var Query $updateQuery */
+        $updateQuery = i\type_check(
+            $this->getUpdateQueryBuilder()->buildQuery($changes, $opts),
+            Query::class,
+            new UnexpectedValueException()
+        );
 
         $options = $updateQuery->getOptions() + $filterQuery->getOptions();
 

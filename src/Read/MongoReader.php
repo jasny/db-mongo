@@ -2,14 +2,16 @@
 
 namespace Jasny\DB\Mongo\Read;
 
+use Improved as i;
 use Improved\IteratorPipeline\PipelineBuilder;
+use InvalidArgumentException;
 use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
 use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\QueryBuilder;
 use Jasny\DB\Read;
 use Jasny\DB\Result;
 use MongoDB\Collection;
-use function Jasny\expect_type;
+use UnexpectedValueException;
 
 /**
  * Fetch data from a MongoDB collection
@@ -103,12 +105,16 @@ class MongoReader implements Read, Read\WithBuilders
      */
     public function count($storage, array $filter = null, array $opts = []): int
     {
-        expect_type($storage, Collection::class, \InvalidArgumentException::class);
+        i\type_check($storage, Collection::class, new InvalidArgumentException());
 
-        $query = $this->queryBuilder->buildQuery($filter ?? [], $opts);
-        expect_type($query, Query::class, \UnexpectedValueException::class);
+        /** @var Query $query */
+        $query = i\type_check(
+            $this->queryBuilder->buildQuery($filter ?? [], $opts),
+            Query::class,
+            new UnexpectedValueException()
+        );
 
-        return $storage->count($query->toArray(), $query->getOptions());
+        return $storage->countDocuments($query->toArray(), $query->getOptions());
     }
 
     /**
@@ -121,17 +127,23 @@ class MongoReader implements Read, Read\WithBuilders
      */
     public function fetch($storage, array $filter = null, array $opts = []): Result
     {
-        expect_type($storage, Collection::class, \InvalidArgumentException::class);
+        i\type_check($storage, Collection::class, new InvalidArgumentException());
 
         /** @var Query $result */
-        $query = $this->queryBuilder->buildQuery($filter ?? [], $opts);
-        expect_type($query, Query::class, \UnexpectedValueException::class);
+        $query = i\type_check(
+            $this->queryBuilder->buildQuery($filter ?? [], $opts),
+            Query::class,
+            new UnexpectedValueException()
+        );
 
         $cursor = $storage->find($query->toArray(), $query->getOptions());
 
         /** @var Result $result */
-        $result = $this->resultBuilder->with($cursor);
-        expect_type($result, Result::class, \UnexpectedValueException::class);
+        $result = i\type_check(
+            $this->resultBuilder->with($cursor),
+            Result::class,
+            new UnexpectedValueException()
+        );
 
         return $result;
     }

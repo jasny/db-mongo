@@ -4,8 +4,10 @@ namespace Jasny\DB\Mongo\Tests\QueryBuilder\Step;
 
 use Improved as i;
 use Improved\Iterator\CombineIterator;
+use Jasny\DB\Exception\InvalidUpdateOperationException;
 use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\Mongo\QueryBuilder\Step\UpdateComposer;
+use OverflowException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -50,7 +52,7 @@ class UpdateComposerTest extends TestCase
         $query = $this->createMock(Query::class);
         $query->expects($this->once())->method('add')->with([$expectedOp => ['foo' => $expectedValue]]);
 
-        i\function_call($callbacks[0], $query, 'foo', $operator, 10);
+        ($callbacks[0])($query, 'foo', $operator, 10);
     }
 
     public function testPatch()
@@ -75,7 +77,7 @@ class UpdateComposerTest extends TestCase
         $query->expects($this->once())->method('add')
             ->with(['$set' => ['foo.one' => 'hi', 'foo.two.a' => 'AAA', 'foo.two.b' => 'BBB']]);
 
-        i\function_call($callbacks[0], $query, 'foo', 'patch', $value);
+        ($callbacks[0])($query, 'foo', 'patch', $value);
     }
 
     public function testIterate()
@@ -104,21 +106,22 @@ class UpdateComposerTest extends TestCase
     public function invalidInfoProvider()
     {
         return [
-            ['$min', 'set', 42, "Invalid field '\$min (set)': Starting with '$' isn't allowed."],
-            ['foo', 'dance', 42, "Invalid field 'foo (dance)': Unknown operator 'dance'."],
+            ['$min', 'set', 42, "Invalid field '\$min (set)': Starting with '$' isn't allowed"],
+            ['foo.$min', 'set', 42, "Invalid field 'foo.\$min (set)': Starting with '$' isn't allowed"],
+            ['foo', 'dance', 42, "Invalid field 'foo (dance)': Unknown operator 'dance'"],
             ['foo', 'set', ['$min' => 10], "Invalid filter value for 'foo (set)': "
-                . "Illegal array key '\$min', starting with '$' isn't allowed."],
+                . "Illegal array key '\$min', starting with '$' isn't allowed"],
             ['foo', 'set', [(object)['bar' => 22], (object)['$max' => 10]], "Invalid filter value for 'foo (set)': "
-                . "Illegal object property '\$max', starting with '$' isn't allowed."]
+                . "Illegal object property '\$max', starting with '$' isn't allowed"]
         ];
     }
 
     /**
      * @dataProvider invalidInfoProvider
-     * @expectedException \Jasny\DB\Exception\InvalidUpdateOperationException
      */
     public function testInvalidFieldName(string $field, string $operator, $value, string $exceptionMsg)
     {
+        $this->expectException(InvalidUpdateOperationException::class);
         $this->expectExceptionMessage($exceptionMsg);
 
         $input = new CombineIterator([['field' => $field, 'operator' => $operator]], [$value]);
@@ -129,15 +132,14 @@ class UpdateComposerTest extends TestCase
         ['values' => $callbacks] = i\iterable_separate($iterator);
 
         $query = $this->createMock(Query::class);
-        i\function_call($callbacks[0], $query, $field, $operator, $value);
+        ($callbacks[0])($query, $field, $operator, $value);
     }
 
-    /**
-     * @expectedException \OverflowException
-     * @expectedExceptionMessage Unable to apply 'foo (set)'; possible circular reference
-     */
     public function testRecursionCircularReference()
     {
+        $this->expectException(OverflowException::class);
+        $this->expectExceptionMessage("Unable to apply 'foo (set)'; possible circular reference");
+
         $objectA = new \stdClass();
         $objectB = new \stdClass();
 
@@ -152,6 +154,6 @@ class UpdateComposerTest extends TestCase
         ['values' => $callbacks] = i\iterable_separate($iterator);
 
         $query = $this->createMock(Query::class);
-        i\function_call($callbacks[0], $query, 'foo', 'set', $objectA);
+        ($callbacks[0])($query, 'foo', 'set', $objectA);
     }
 }

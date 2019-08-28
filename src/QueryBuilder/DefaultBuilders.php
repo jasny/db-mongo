@@ -3,7 +3,6 @@
 namespace Jasny\DB\Mongo\QueryBuilder;
 
 use Improved as i;
-use const Improved\FUNCTION_ARGUMENT_PLACEHOLDER as __;
 use Improved\IteratorPipeline\PipelineBuilder;
 use Jasny\DB\FieldMap\ConfiguredFieldMap;
 use Jasny\DB\Mongo\QueryBuilder\Step\BuildStep;
@@ -53,9 +52,13 @@ final class DefaultBuilders
     public static function createSaveQueryBuilder(): StagedQueryBuilder
     {
         return (new StagedQueryBuilder)
-            ->onPrepare(i\function_partial(i\iterable_map, __, new ConfiguredFieldMap(['id' => '_id'])))
+            ->onPrepare(function (iterable $items) {
+                return i\iterable_map($items, new ConfiguredFieldMap(['id' => '_id']));
+            })
             ->onPrepare(new CastToMongo())
-            ->onCompose(i\function_partial(i\iterable_chunk, __, 100))
+            ->onCompose(function (iterable $items) {
+                return i\iterable_chunk($items, 100);
+            })
             ->onBuild(new SaveQueryBuildStep());
     }
 

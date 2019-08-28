@@ -35,7 +35,7 @@ class MongoReaderTest extends TestCase
     protected $resultBuilder;
 
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->queryBuilder = $this->createMock(QueryBuilder::class);
         $this->resultBuilder = $this->createMock(PipelineBuilder::class);
@@ -108,7 +108,7 @@ class MongoReaderTest extends TestCase
 
         /** @var Collection|MockObject $collection */
         $collection = $this->createMock(Collection::class);
-        $collection->expects($this->once())->method('count')
+        $collection->expects($this->once())->method('countDocuments')
             ->with(['foo' => 42, 'color' => ['$ne' => 'blue']])
             ->willReturn(10);
 

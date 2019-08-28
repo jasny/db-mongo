@@ -2,6 +2,7 @@
 
 namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 
+use Jasny\DB\Exception\InvalidOptionException;
 use Jasny\DB\Option;
 use Jasny\DB\Option as opt;
 use Jasny\DB\Mongo\QueryBuilder\OptionConverter;
@@ -96,12 +97,11 @@ class OptionConverterTest extends TestCase
     }
 
 
-    /**
-     * @expectedException \Jasny\DB\Exception\InvalidOptionException
-     * @expectedExceptionMessage Unsupported query option class 'UnsupportedOption'
-     */
     public function testUnsupportedOption()
     {
+        $this->expectException(InvalidOptionException::class);
+        $this->expectExceptionMessage("Unsupported query option class 'UnsupportedOption'");
+
         $option = $this->getMockBuilder(Option::class)
             ->setMockClassName('UnsupportedOption')
             ->disableOriginalConstructor()
@@ -112,12 +112,11 @@ class OptionConverterTest extends TestCase
         $converter->convert([$option]);
     }
 
-    /**
-     * @expectedException \Jasny\DB\Exception\InvalidOptionException
-     * @expectedExceptionMessage Unknown query option 'funky'
-     */
     public function testUnkownFieldsOption()
     {
+        $this->expectException(InvalidOptionException::class);
+        $this->expectExceptionMessage("Unknown query option 'funky'");
+
         $option = new opt\FieldsOption('funky', ['foo', 'bar']);
 
         $converter = new OptionConverter();

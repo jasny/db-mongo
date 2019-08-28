@@ -2,9 +2,11 @@
 
 namespace Jasny\DB\Mongo\Tests\TypeConversion;
 
+use InvalidArgumentException;
 use Jasny\DB\Mongo\TypeConversion\CastToPHP;
 use Jasny\TestHelper;
 use MongoDB\BSON;
+use OverflowException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -121,11 +123,10 @@ class CastToPHPTest extends TestCase
         $this->assertEquals($expected, $resultArr);
     }
 
-    /**
-     * @expectedException \OverflowException
-     */
     public function testRecursionCircularReference()
     {
+        $this->expectException(OverflowException::class);
+
         $objectA = new \stdClass();
         $objectB = new \stdClass();
 
@@ -164,9 +165,9 @@ class CastToPHPTest extends TestCase
         $result = $cast((object)(['__pclass' => $className] + $data));
 
         $this->assertInstanceOf($className, $result);
-        $this->assertAttributeEquals(42, 'foo', $result);
-        $this->assertAttributeEquals('blue', 'color', $result);
-        $this->assertAttributeEquals(new \DateTimeImmutable('2001-01-01'), 'date', $result);
+        $this->assertEquals(42, $result->foo);
+        $this->assertEquals('blue', $result->color);
+        $this->assertEquals(new \DateTimeImmutable('2001-01-01'), $result->date);
     }
 
     public function testWithPersistableWithCallback()
@@ -192,9 +193,9 @@ class CastToPHPTest extends TestCase
         $result = $cast((object)(['__pclass' => $className] + $data));
 
         $this->assertInstanceOf($className, $result);
-        $this->assertAttributeEquals(42, 'foo', $result);
-        $this->assertAttributeEquals('blue', 'color', $result);
-        $this->assertAttributeEquals(new \DateTimeImmutable('2001-01-01'), 'date', $result);
+        $this->assertEquals(42, $result->foo);
+        $this->assertEquals('blue', $result->color);
+        $this->assertEquals(new \DateTimeImmutable('2001-01-01'), $result->date);
     }
 
     public function testWithNonPersistable()
@@ -238,19 +239,17 @@ class CastToPHPTest extends TestCase
         $this->assertEquals('ABC:XYZ', $result);
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     */
     public function testWithBSONInvalidClass()
     {
+        $this->expectException(InvalidArgumentException::class);
+
         (new CastToPHP)->withBSON(\DateTime::class, function() {});
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     */
     public function testWithBinaryInvalidType()
     {
+        $this->expectException(InvalidArgumentException::class);
+
         (new CastToPHP)->withBinary(1000, function() {});
     }
 

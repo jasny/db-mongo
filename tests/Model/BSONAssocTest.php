@@ -42,10 +42,10 @@ class BSONAssocTest extends TestCase
         $this->assertEquals($this->document, $result);
     }
 
-    public function testBsonUnserialize()
+    public function testBsonDeserialize()
     {
         $bson = new BSONAssoc();
-        $bson->bsonUnserialize($this->document);
+        $bson->bsonDeserialize($this->document);
 
         $this->assertEquals($this->assoc, $bson->getArrayCopy());
     }

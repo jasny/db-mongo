@@ -2,6 +2,7 @@
 
 namespace Jasny\DB\Mongo\Write;
 
+use Improved as i;
 use Improved\IteratorPipeline\Pipeline;
 use Improved\IteratorPipeline\PipelineBuilder;
 use Jasny\DB\Exception\InvalidOptionException;
@@ -11,7 +12,7 @@ use Jasny\DB\Write;
 use Jasny\DB\Result;
 use Jasny\DB\Option;
 use Jasny\DB\Option\LimitOption;
-use function Jasny\expect_type;
+use UnexpectedValueException;
 
 /**
  * Fetch data from a MongoDB collection
@@ -191,8 +192,11 @@ class MongoWriter implements Write, Write\WithBuilders
             });
 
         /** @var Result $result */
-        $result = $this->getResultBuilder()->with($documents);
-        expect_type($result, Result::class, \UnexpectedValueException::class);
+        $result = i\type_check(
+            $this->getResultBuilder()->with($documents),
+            Result::class,
+            new UnexpectedValueException()
+        );
 
         return $result->withMeta($meta);
     }
@@ -202,9 +206,9 @@ class MongoWriter implements Write, Write\WithBuilders
      *
      * @param string   $method
      * @param Option[] $opts
-     * @return void
+     * @return string
      */
-    protected function oneOrMany(string $method, array $opts)
+    protected function oneOrMany(string $method, array $opts): string
     {
         /** @var LimitOption|null $limit */
         $limit = Pipeline::with($opts)

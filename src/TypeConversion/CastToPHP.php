@@ -2,10 +2,12 @@
 
 namespace Jasny\DB\Mongo\TypeConversion;
 
+use Closure;
+use DateTimeImmutable;
 use Improved as i;
 use MongoDB\BSON;
-use function Jasny\array_without;
-use function Jasny\expect_type;
+use stdClass;
+use UnexpectedValueException;
 
 /**
  * Convert MongoDB type to PHP type.
@@ -28,10 +30,10 @@ class CastToPHP
      */
     public function __construct()
     {
-        $toDateTime = \Closure::fromCallable([$this, 'toDateTime'])->bindTo(null);
+        $toDateTime = Closure::fromCallable([$this, 'toDateTime'])->bindTo(null);
         $this->bsonConversions[BSON\UTCDateTime::class] = $toDateTime;
 
-        $toString = \Closure::fromCallable([$this, 'toString'])->bindTo(null);
+        $toString = Closure::fromCallable([$this, 'toString'])->bindTo(null);
         $this->bsonConversions[BSON\ObjectId::class] = $toString;
         $this->bsonConversions[BSON\Binary::class] = $toString;
     }
@@ -100,9 +102,9 @@ class CastToPHP
     /**
      * Recursively convert BSON to PHP
      *
-     * @param iterable|\stdClass $item
+     * @param iterable|stdClass $item
      * @param int $depth
-     * @return iterable|\stdClass
+     * @return iterable|stdClass
      */
     protected function applyRecursive($item, int $depth = 0)
     {
@@ -110,7 +112,7 @@ class CastToPHP
             throw new \OverflowException("Unable to convert MongoDB type to value; possible circular reference");
         }
 
-        $iterable = $item instanceof \stdClass ? (array)$item : $item;
+        $iterable = $item instanceof stdClass ? (array)$item : $item;
 
         $generator = i\iterable_map($iterable, function($value) use ($depth) {
             return $this->convertValue($value, $depth + 1); // recursion
@@ -122,7 +124,7 @@ class CastToPHP
 
         $array = i\iterable_to_array($generator, true);
 
-        return $item instanceof \stdClass ? (object)$array : $array;
+        return $item instanceof stdClass ? (object)$array : $array;
     }
 
     /**
@@ -138,7 +140,7 @@ class CastToPHP
             return $value; // Quick return
         }
 
-        if ($value instanceof \stdClass && isset($value->__pclass)) {
+        if ($value instanceof stdClass && isset($value->__pclass)) {
             $value = $this->convertPersistable($value);
         }
 
@@ -146,7 +148,7 @@ class CastToPHP
             $value = $this->convertBSON($value);
         }
 
-        if (is_iterable($value) || $value instanceof \stdClass) {
+        if (is_iterable($value) || $value instanceof stdClass) {
             $value = $this->applyRecursive($value, $depth);
         }
 
@@ -157,10 +159,10 @@ class CastToPHP
     /**
      * Cast persistable stdClass object
      *
-     * @param \stdClass $value
+     * @param stdClass $value
      * @return object
      */
-    protected function convertPersistable(\stdClass $value)
+    protected function convertPersistable(stdClass $value)
     {
         $pclass = $value->__pclass;
 
@@ -169,15 +171,20 @@ class CastToPHP
         });
 
         if ($convert === null) {
-            trigger_error("Won't cast object to '$value->__pclass': class not marked as persistable", E_USER_WARNING);
+            $msg = "Won't cast object to '{$value->__pclass}': class not marked as persistable";
+            trigger_error($msg, E_USER_WARNING);
             return $value;
         }
 
-        $data = array_without((array)$value, ['__pclass']);
+        $data = (array)$value;
+        unset($data['__pclass']);
         $class = $value->__pclass;
 
-        $object = i\function_call($convert, $class, $data);
-        expect_type($object, $class, \UnexpectedValueException::class);
+        $object = i\type_check(
+            ($convert)($class, $data),
+            $class,
+            new UnexpectedValueException()
+        );
 
         return $object;
     }
@@ -199,7 +206,7 @@ class CastToPHP
             return $value;
         }
 
-        return i\function_call($this->bsonConversions[$type], $value);
+        return ($this->bsonConversions[$type])($value);
     }
 
 
@@ -212,7 +219,7 @@ class CastToPHP
      */
     protected function toDateTime(BSON\UTCDateTime $bsonDate): \DateTimeImmutable
     {
-        return (new \DateTimeImmutable)->setTimestamp($bsonDate->toDateTime()->getTimestamp());
+        return (new DateTimeImmutable())->setTimestamp($bsonDate->toDateTime()->getTimestamp());
     }
 
     /**

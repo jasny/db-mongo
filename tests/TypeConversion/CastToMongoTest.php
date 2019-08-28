@@ -5,7 +5,9 @@ namespace Jasny\DB\Mongo\Tests\TypeConversion;
 use Jasny\DB\Mongo\TypeConversion\CastToMongo;
 use Jasny\TestHelper;
 use MongoDB\BSON;
+use OverflowException;
 use PHPUnit\Framework\TestCase;
+use UnexpectedValueException;
 
 /**
  * @covers \Jasny\DB\Mongo\TypeConversion\CastToMongo
@@ -113,11 +115,10 @@ class CastToMongoTest extends TestCase
         $this->assertEquals($expected, $resultArr);
     }
 
-    /**
-     * @expectedException \OverflowException
-     */
     public function testRecursionCircularReference()
     {
+        $this->expectException(OverflowException::class);
+
         $objectA = new \stdClass();
         $objectB = new \stdClass();
 
@@ -213,7 +214,7 @@ class CastToMongoTest extends TestCase
         fclose($closed);
 
         return [
-            [$object, $className . ' object'],
+            [$object, 'instance of ' . $className],
             [$resource, 'stream resource'],
             [$closed, 'resource (closed)']
         ];
@@ -221,10 +222,10 @@ class CastToMongoTest extends TestCase
 
     /**
      * @dataProvider unexpectedValueProvider
-     * @expectedException \UnexpectedValueException
      */
     public function testUnexpectedValue($value, $type)
     {
+        $this->expectException(UnexpectedValueException::class);
         $this->expectExceptionMessage("Unable to cast $type to MongoDB type");
 
         $cast = new CastToMongo();

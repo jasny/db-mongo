@@ -4,8 +4,10 @@ namespace Jasny\DB\Mongo\Tests\QueryBuilder\Step;
 
 use Improved as i;
 use Improved\Iterator\CombineIterator;
+use Jasny\DB\Exception\InvalidFilterException;
 use Jasny\DB\Mongo\QueryBuilder\Step\FilterComposer;
 use Jasny\DB\Mongo\QueryBuilder\Query;
+use OverflowException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -50,7 +52,7 @@ class FilterComposerTest extends TestCase
         $query = $this->createMock(Query::class);
         $query->expects($this->once())->method('add')->with(['foo' => $expected]);
 
-        i\function_call($callbacks[0], $query, 'foo', $operator, 42);
+        ($callbacks[0])($query, 'foo', $operator, 42);
     }
 
     public function testIterate()
@@ -79,21 +81,22 @@ class FilterComposerTest extends TestCase
     public function invalidInfoProvider()
     {
         return [
-            ['$min', '', 42, "Invalid field '\$min': Starting with '$' isn't allowed."],
-            ['foo', 'dance', 42, "Invalid field 'foo (dance)': Unknown operator 'dance'."],
+            ['$min', '', 42, "Invalid field '\$min': Starting with '$' isn't allowed"],
+            ['foo.$min', '', 42, "Invalid field 'foo.\$min': Starting with '$' isn't allowed"],
+            ['foo', 'dance', 42, "Invalid field 'foo (dance)': Unknown operator 'dance'"],
             ['foo', 'any', ['$min' => 10], "Invalid filter value for 'foo (any)': "
-                . "Illegal array key '\$min', starting with '$' isn't allowed."],
+                . "Illegal array key '\$min', starting with '$' isn't allowed"],
             ['foo', 'any', [(object)['bar' => 22], (object)['$max' => 10]], "Invalid filter value for 'foo (any)': "
-                . "Illegal object property '\$max', starting with '$' isn't allowed."]
+                . "Illegal object property '\$max', starting with '$' isn't allowed"]
         ];
     }
 
     /**
      * @dataProvider invalidInfoProvider
-     * @expectedException \Jasny\DB\Exception\InvalidFilterException
      */
     public function testInvalidFieldName(string $field, string $operator, $value, string $exceptionMsg)
     {
+        $this->expectException(InvalidFilterException::class);
         $this->expectExceptionMessage($exceptionMsg);
 
         $input = new CombineIterator([['field' => $field, 'operator' => $operator]], [$value]);
@@ -104,15 +107,14 @@ class FilterComposerTest extends TestCase
         ['values' => $callbacks] = i\iterable_separate($iterator);
 
         $query = $this->createMock(Query::class);
-        i\function_call($callbacks[0], $query, $field, $operator, $value);
+        ($callbacks[0])($query, $field, $operator, $value);
     }
 
-    /**
-     * @expectedException \OverflowException
-     * @expectedExceptionMessage Unable to apply 'foo'; possible circular reference
-     */
     public function testRecursionCircularReference()
     {
+        $this->expectException(OverflowException::class);
+        $this->expectExceptionMessage("Unable to apply 'foo'; possible circular reference");
+
         $objectA = new \stdClass();
         $objectB = new \stdClass();
 
@@ -127,6 +129,6 @@ class FilterComposerTest extends TestCase
         ['values' => $callbacks] = i\iterable_separate($iterator);
 
         $query = $this->createMock(Query::class);
-        i\function_call($callbacks[0], $query, 'foo', '', $objectA);
+        ($callbacks[0])($query, 'foo', '', $objectA);
     }
 }

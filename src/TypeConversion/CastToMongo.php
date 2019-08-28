@@ -2,11 +2,10 @@
 
 namespace Jasny\DB\Mongo\TypeConversion;
 
+use DateTimeInterface;
 use Improved as i;
 use MongoDB\BSON;
-use function Jasny\get_type_description;
-use function Jasny\expect_type;
-use function Jasny\object_get_properties;
+use UnexpectedValueException;
 
 /**
  * Cast PHP type to MongoDB type.
@@ -36,8 +35,8 @@ class CastToMongo
     public function withPersistable(string $class, ?callable $convert = null)
     {
         $callback = (function($object) use ($convert) {
-            $values = isset($convert) ? $convert($object) : object_get_properties($object, true);
-            expect_type($values, ['array'], \UnexpectedValueException::class);
+            $values = isset($convert) ? $convert($object) : get_object_vars($object);
+            i\type_check($values, ['array'], new UnexpectedValueException());
 
             return ['__pclass' => get_class($object)] + $values;
         })->bindTo(null);
@@ -115,7 +114,7 @@ class CastToMongo
             return $this->convertValue($converted, $depth + 1); // recursion
         }
 
-        $type = get_type_description($value);
+        $type = i\type_describe($value);
         throw new \UnexpectedValueException("Unable to cast $type to MongoDB type");
     }
 
@@ -127,7 +126,7 @@ class CastToMongo
      */
     protected function convertResource($value)
     {
-        expect_type($value, 'resource');
+        i\type_check($value, 'resource');
 
         $type = get_resource_type($value) . ' resource';
 
@@ -135,7 +134,7 @@ class CastToMongo
             throw new \UnexpectedValueException("Unable to cast $type to MongoDB type");
         }
 
-        return i\function_call($this->conversions[$type], $value);
+        return ($this->conversions[$type])($value);
     }
 
     /**
@@ -144,30 +143,28 @@ class CastToMongo
      * @param object $value
      * @return mixed
      */
-    protected function convertObject($value)
+    protected function convertObject(object $value)
     {
-        expect_type($value, 'object');
-
         $convert = i\iterable_find($this->conversions, function($callable, string $class) use ($value) {
             return is_a($value, $class);
         });
 
         if (!isset($convert)) {
-            $type = get_type_description($value);
+            $type = i\type_describe($value);
             throw new \UnexpectedValueException("Unable to cast $type to MongoDB type");
         }
 
-        return i\function_call($convert, $value);
+        return ($convert)($value);
     }
 
 
     /**
      * Convert DateTime object to BSON UTCDateTime.
      *
-     * @param \DateTimeImmutable $date
+     * @param DateTimeInterface $date
      * @return BSON\UTCDateTime
      */
-    protected function toBsonDateTime(\DateTimeInterface $date): BSON\UTCDateTime
+    protected function toBsonDateTime(DateTimeInterface $date): BSON\UTCDateTime
     {
         return new BSON\UTCDateTime($date->getTimestamp() * 1000);
     }

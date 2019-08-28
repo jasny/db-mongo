@@ -4,6 +4,7 @@ namespace Jasny\DB\Mongo\Tests\Writer;
 
 use Improved as i;
 use Improved\IteratorPipeline\PipelineBuilder;
+use Jasny\DB\Exception\InvalidOptionException;
 use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\Option as opt;
 use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
@@ -53,7 +54,7 @@ class MongoWriterTest extends TestCase
     protected $resultBuilder;
 
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->filterQueryBuilder = $this->createMock(QueryBuilder::class);
         $this->updateQueryBuilder = $this->createMock(QueryBuilder::class);
@@ -388,12 +389,11 @@ class MongoWriterTest extends TestCase
     }
 
 
-    /**
-     * @expectedException \Jasny\DB\Exception\InvalidOptionException
-     * @expectedExceptionMessage MongoDB can update one document or all documents, but not exactly 7
-     */
     public function testUpdateSeven()
     {
+        $this->expectException(InvalidOptionException::class);
+        $this->expectExceptionMessage("MongoDB can update one document or all documents, but not exactly 7");
+
         $this->filterQueryBuilder->expects($this->once())->method('buildQuery')->willReturn(new Query());
         $this->updateQueryBuilder->expects($this->once())->method('buildQuery')->willReturn(new Query());
 

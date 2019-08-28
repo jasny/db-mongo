@@ -2,9 +2,11 @@
 
 namespace Jasny\DB\Mongo\QueryBuilder\Step;
 
+use Improved as i;
+use InvalidArgumentException;
 use Jasny\DB\Exception\InvalidUpdateOperationException;
 use Jasny\DB\Mongo\QueryBuilder\Query;
-use function Jasny\expect_type;
+use UnexpectedValueException;
 
 /**
  * Standard compose step for filter query.
@@ -53,7 +55,7 @@ class UpdateComposer extends AbstractComposer
             $accumulator[$path] = $element;
         } else {
             foreach ($element as $key => $value) {
-                expect_type($key, 'string', \UnexpectedValueException::class);
+                i\type_check($key, 'string', new UnexpectedValueException());
 
                 $field = ($path === '' ? $key : "$path.$key");
                 $this->flattenFields($value, $field, $accumulator); // recursion
@@ -79,10 +81,10 @@ class UpdateComposer extends AbstractComposer
             case '>':
                 return [substr($mongoOperator, 1) => $this->flattenFields($value, $field)];
             case '-':
-                expect_type($value, ['int', 'float'], \UnexpectedValueException::class);
+                i\type_check($value, ['int', 'float'], new UnexpectedValueException());
                 return [substr($mongoOperator, 1) => [$field => -1 * $value]];
             case '/':
-                expect_type($value, ['int', 'float'], \UnexpectedValueException::class);
+                i\type_check($value, ['int', 'float'], new UnexpectedValueException());
                 return [substr($mongoOperator, 1) => [$field => 1 / $value]];
             default:
                 return [$mongoOperator => [$field => $value]];
@@ -97,7 +99,7 @@ class UpdateComposer extends AbstractComposer
      * @param string $operator
      * @param mixed  $value
      * @return void
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     protected function apply(Query $query, string $field, string $operator, $value): void
     {

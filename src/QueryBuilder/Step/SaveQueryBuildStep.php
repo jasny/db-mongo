@@ -3,7 +3,6 @@
 namespace Jasny\DB\Mongo\QueryBuilder\Step;
 
 use Improved as i;
-use function Jasny\array_without;
 
 /**
  * Stage query builder for `save` queries, build step
@@ -31,11 +30,11 @@ class SaveQueryBuildStep
     {
         $iterable = i\iterable_map($batch, function($item) {
             $id = $item['_id'] ?? null;
-            $values = array_without($item, ['_id']);
+            unset($item['_id']);
 
             return isset($id)
-                ? ['replaceOne' => [['_id' => $id], $values]]
-                : ['insertOne' => $values];
+                ? ['replaceOne' => [['_id' => $id], $item]]
+                : ['insertOne' => $item];
         });
 
         return i\iterable_to_array($iterable);
