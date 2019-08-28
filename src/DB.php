@@ -31,6 +31,8 @@ class DB extends \MongoDB\Database implements Connection
     public function __construct($manager, $name = null, $options = [])
     {
         if (is_array($manager) || $manager instanceof \stdClass) {
+            $options = (array) $manager;
+            unset($options['client'], $options['database']);
             $manager = $this->getOptionsAsString($manager);
         }
 
@@ -39,10 +41,10 @@ class DB extends \MongoDB\Database implements Connection
                 $name = $this->getDbNameFromUri($manager);
             }
 
-            $manager = new Manager($manager);
+            $manager = new Manager($manager, $options);
         }
 
-        parent::__construct($manager, $name, $options);
+        parent::__construct($manager, $name);
     }
 
     /**
