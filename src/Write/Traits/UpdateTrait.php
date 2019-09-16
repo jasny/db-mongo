@@ -4,10 +4,12 @@ namespace Jasny\DB\Mongo\Write\Traits;
 
 use Improved as i;
 use Jasny\DB\Mongo\QueryBuilder\Query;
-use Jasny\DB\QueryBuilder;
+use Jasny\DB\Mongo\QueryBuilder\UpdateQueryBuilder;
+use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\Update\UpdateOperation;
 use Jasny\DB\Result;
-use Jasny\DB\Option;
+use Jasny\DB\Option\OptionInterface;
+use Jasny\DB\Write\WriteInterface;
 use MongoDB\Collection;
 use MongoDB\UpdateResult;
 use UnexpectedValueException;
@@ -18,48 +20,59 @@ use UnexpectedValueException;
 trait UpdateTrait
 {
     /**
+     * Get MongoDB collection object.
+     */
+    abstract public function getStorage(): Collection;
+
+    /**
      * Get the query builder.
      *
-     * @return QueryBuilder
+     * @return QueryBuilderInterface
      */
-    abstract public function getQueryBuilder(): QueryBuilder;
-
-    /**
-     * Get the query builder of updating items.
-     *
-     * @return QueryBuilder
-     */
-    abstract public function getUpdateQueryBuilder(): QueryBuilder;
-
-    /**
-     * Combine multiple bulk write results into a single result.
-     *
-     * @param array $ids
-     * @param array $meta
-     * @return Result&iterable<array>
-     */
-    abstract protected function createResult(array $ids, array $meta): Result;
+    abstract public function getQueryBuilder(): QueryBuilderInterface;
 
     /**
      * Check limit to select 'One' or 'Many' variant of method.
      *
-     * @param string   $method
-     * @param Option[] $opts
+     * @param string            $method
+     * @param OptionInterface[] $opts
      * @return string
      */
     abstract protected function oneOrMany(string $method, array $opts): string;
 
 
     /**
+     * Get the query builder of updating items.
+     *
+     * @return QueryBuilderInterface
+     */
+    public function getUpdateQueryBuilder(): QueryBuilderInterface
+    {
+        $this->updateQueryBuilder ??= new UpdateQueryBuilder();
+
+        return $this->updateQueryBuilder;
+    }
+
+    /**
+     * Create a reader with a custom query builder.
+     *
+     * @param QueryBuilderInterface $builder
+     * @return static
+     */
+    public function withUpdateQueryBuilder(QueryBuilderInterface $builder): WriteInterface
+    {
+        return $this->with('updateQueryBuilder', $builder);
+    }
+
+    /**
      * Query and update records.
      *
-     * @param Collection                        $storage
-     * @param array                             $filter
-     * @param UpdateOperation|UpdateOperation[] $changes
-     * @param Option[]                          $opts
+     * @param array             $filter
+     * @param UpdateOperation[] $changes
+     * @param OptionInterface[] $opts
      * @return Result
      */
-    public function update($storage, array $filter, $changes, array $opts = []): Result
+    public function update(array $filter, array $changes, array $opts = []): Result
     {
         /** @var Query $filterQuery */
         $filterQuery = i\type_check(
@@ -78,8 +91,8 @@ trait UpdateTrait
         $options = $updateQuery->getOptions() + $filterQuery->getOptions();
 
         /** @var UpdateResult $updateResult */
-        $method = $this->oneOrMany('update', $opts);
-        $updateResult = $storage->$method($filterQuery->toArray(), $updateQuery->toArray(), $options);
+        $update = $this->oneOrMany('update', $opts);
+        $updateResult = $update($filterQuery->toArray(), $updateQuery->toArray(), $options);
 
         $meta = [
             'count' => $updateResult->getModifiedCount() + $updateResult->getUpsertedCount(),

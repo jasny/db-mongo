@@ -1,14 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Read;
 
 use Improved as i;
 use Improved\IteratorPipeline\PipelineBuilder;
-use InvalidArgumentException;
-use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
+use Jasny\DB\Mongo\QueryBuilder\FilterQueryBuilder;
 use Jasny\DB\Mongo\QueryBuilder\Query;
-use Jasny\DB\QueryBuilder;
-use Jasny\DB\Read;
+use Jasny\DB\Mongo\Result\ResultBuilder;
+use Jasny\DB\Option\OptionInterface;
+use Jasny\DB\QueryBuilder\QueryBuilderInterface;
+use Jasny\DB\Read\ReadInterface;
 use Jasny\DB\Result;
 use MongoDB\Collection;
 use UnexpectedValueException;
@@ -16,29 +19,58 @@ use UnexpectedValueException;
 /**
  * Fetch data from a MongoDB collection
  */
-class MongoReader implements Read, Read\WithBuilders
+class MongoReader implements ReadInterface
 {
-    /**
-     * @var QueryBuilder
-     */
-    protected $queryBuilder;
+    protected Collection $collection;
+
+    protected QueryBuilderInterface $queryBuilder;
+    protected PipelineBuilder $resultBuilder;
+
 
     /**
-     * @var PipelineBuilder
+     * MongoWriter constructor.
      */
-    protected $resultBuilder;
+    public function __construct(Collection $collection)
+    {
+        $this->collection = $collection;
+    }
 
+    /**
+     * Get the mongodb collection the associated with the writer.
+     *
+     * @return Collection
+     */
+    public function getStorage(): Collection
+    {
+        return $this->collection;
+    }
+
+
+    /**
+     * Create a copy with a modified property.
+     *
+     * @param string                                $prop
+     * @param QueryBuilderInterface|PipelineBuilder $builder
+     * @return static
+     */
+    protected function with(string $prop, $builder)
+    {
+        if (isset($this->{$prop}) && $this->{$prop} === $builder) {
+            return $this;
+        }
+
+        $clone = clone $this;
+        $clone->{$prop} = $builder;
+
+        return $clone;
+    }
 
     /**
      * Get the query builder.
-     *
-     * @return QueryBuilder
      */
-    public function getQueryBuilder(): QueryBuilder
+    public function getQueryBuilder(): QueryBuilderInterface
     {
-        if (!isset($this->queryBuilder)) {
-            $this->queryBuilder = DefaultBuilders::createFilterQueryBuilder();
-        }
+        $this->queryBuilder ??= new FilterQueryBuilder();
 
         return $this->queryBuilder;
     }
@@ -46,19 +78,12 @@ class MongoReader implements Read, Read\WithBuilders
     /**
      * Create a reader with a custom query builder.
      *
-     * @param QueryBuilder $queryBuilder
+     * @param QueryBuilderInterface $builder
      * @return static
      */
-    public function withQueryBuilder(QueryBuilder $queryBuilder): self
+    public function withQueryBuilder(QueryBuilderInterface $builder): ReadInterface
     {
-        if ($this->queryBuilder === $queryBuilder) {
-            return $this;
-        }
-
-        $clone = clone $this;
-        $clone->queryBuilder = $queryBuilder;
-
-        return $clone;
+        return $this->with('queryBuilder', $builder);
     }
 
 
@@ -69,9 +94,7 @@ class MongoReader implements Read, Read\WithBuilders
      */
     public function getResultBuilder(): PipelineBuilder
     {
-        if (!isset($this->resultBuilder)) {
-            $this->resultBuilder = DefaultBuilders::createResultBuilder();
-        }
+        $this->resultBuilder ??= new ResultBuilder();
 
         return $this->resultBuilder;
     }
@@ -79,34 +102,24 @@ class MongoReader implements Read, Read\WithBuilders
     /**
      * Create a reader with a custom result builder.
      *
-     * @param PipelineBuilder $resultBuilder
+     * @param PipelineBuilder $builder
      * @return static
      */
-    public function withResultBuilder(PipelineBuilder $resultBuilder): self
+    public function withResultBuilder(PipelineBuilder $builder): ReadInterface
     {
-        if ($this->resultBuilder === $resultBuilder) {
-            return $this;
-        }
-
-        $clone = clone $this;
-        $clone->resultBuilder = $resultBuilder;
-
-        return $clone;
+        return $this->with('resultBuilder', $builder);
     }
 
 
     /**
      * Fetch the number of entities in the set.
      *
-     * @param Collection $storage
-     * @param array      $filter
-     * @param array      $opts
+     * @param array             $filter
+     * @param OptionInterface[] $opts
      * @return int
      */
-    public function count($storage, array $filter = null, array $opts = []): int
+    public function count(array $filter = null, array $opts = []): int
     {
-        i\type_check($storage, Collection::class, new InvalidArgumentException());
-
         /** @var Query $query */
         $query = i\type_check(
             $this->queryBuilder->buildQuery($filter ?? [], $opts),
@@ -114,21 +127,18 @@ class MongoReader implements Read, Read\WithBuilders
             new UnexpectedValueException()
         );
 
-        return $storage->countDocuments($query->toArray(), $query->getOptions());
+        return $this->getStorage()->countDocuments($query->toArray(), $query->getOptions());
     }
 
     /**
      * Query and fetch data.
      *
-     * @param Collection $storage
-     * @param array      $filter
-     * @param array      $opts
+     * @param array             $filter
+     * @param OptionInterface[] $opts
      * @return Result
      */
-    public function fetch($storage, array $filter = null, array $opts = []): Result
+    public function fetch(array $filter = null, array $opts = []): Result
     {
-        i\type_check($storage, Collection::class, new InvalidArgumentException());
-
         /** @var Query $result */
         $query = i\type_check(
             $this->queryBuilder->buildQuery($filter ?? [], $opts),
@@ -136,14 +146,10 @@ class MongoReader implements Read, Read\WithBuilders
             new UnexpectedValueException()
         );
 
-        $cursor = $storage->find($query->toArray(), $query->getOptions());
+        $cursor = $this->getStorage()->find($query->toArray(), $query->getOptions());
 
         /** @var Result $result */
-        $result = i\type_check(
-            $this->resultBuilder->with($cursor),
-            Result::class,
-            new UnexpectedValueException()
-        );
+        $result = $this->resultBuilder->with($cursor);
 
         return $result;
     }

@@ -11,6 +11,7 @@ use UnexpectedValueException;
 
 /**
  * @covers \Jasny\DB\Mongo\TypeConversion\CastToMongo
+ * @covers \Jasny\DB\Mongo\TypeConversion\AbstractTypeConversion
  */
 class CastToMongoTest extends TestCase
 {
@@ -22,7 +23,9 @@ class CastToMongoTest extends TestCase
         $object = (object)['foo' => 42];
 
         $serializable = new class implements BSON\Serializable {
-            public function bsonSerialize() { }
+            public function bsonSerialize()
+            {
+            }
         };
 
         return [

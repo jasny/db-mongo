@@ -3,8 +3,8 @@
 namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 
 use Jasny\DB\Exception\InvalidOptionException;
-use Jasny\DB\Option;
 use Jasny\DB\Option as opt;
+use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\Mongo\QueryBuilder\OptionConverter;
 use PHPUnit\Framework\TestCase;
 
@@ -30,7 +30,7 @@ class OptionConverterTest extends TestCase
         $converter = new OptionConverter();
         $result = $converter->convert([$option]);
 
-        $this->assertEquals(['projection' => ['foo' => -1, 'bar' => -1, 'qux' => -1]], $result);
+        $this->assertEquals(['projection' => ['foo' => 0, 'bar' => 0, 'qux' => 0]], $result);
     }
 
     public function limitProvider()
@@ -45,7 +45,7 @@ class OptionConverterTest extends TestCase
     /**
      * @dataProvider limitProvider
      */
-    public function testLimit($expected, Option $option)
+    public function testLimit($expected, OptionInterface $option)
     {
         $converter = new OptionConverter();
         $result = $converter->convert([$option]);
@@ -78,7 +78,7 @@ class OptionConverterTest extends TestCase
         $result = $converter->convert($opts);
 
         $expected = [
-            'projection' => ['foo' => 1, 'bar' => -1, 'color' => 1, 'qux' => -1],
+            'projection' => ['foo' => 1, 'bar' => 0, 'color' => 1, 'qux' => 0],
             'limit' => 20,
             'skip' => 40
         ];
@@ -102,22 +102,11 @@ class OptionConverterTest extends TestCase
         $this->expectException(InvalidOptionException::class);
         $this->expectExceptionMessage("Unsupported query option class 'UnsupportedOption'");
 
-        $option = $this->getMockBuilder(Option::class)
+        $option = $this->getMockBuilder(OptionInterface::class)
             ->setMockClassName('UnsupportedOption')
             ->disableOriginalConstructor()
             ->disableProxyingToOriginalMethods()
             ->getMock();
-
-        $converter = new OptionConverter();
-        $converter->convert([$option]);
-    }
-
-    public function testUnkownFieldsOption()
-    {
-        $this->expectException(InvalidOptionException::class);
-        $this->expectExceptionMessage("Unknown query option 'funky'");
-
-        $option = new opt\FieldsOption('funky', ['foo', 'bar']);
 
         $converter = new OptionConverter();
         $converter->convert([$option]);

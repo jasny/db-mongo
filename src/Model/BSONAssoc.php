@@ -1,40 +1,41 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Model;
 
-use MongoDB\BSON\Serializable;
-use MongoDB\BSON\Unserializable;
+use Improved\IteratorPipeline\Pipeline;
+use MongoDB\BSON\Serializable as BSONSerializable;
+use MongoDB\BSON\Unserializable as BSONUnserializable;
 use MongoDB\Model\BSONArray;
 
 /**
  * BSON representation of an associative array.
  * The array is not converted to an object, instead the keys are added to the value.
+ * @immutable
  */
-class BSONAssoc extends BSONArray implements Serializable, Unserializable
+class BSONAssoc extends BSONArray implements BSONSerializable, BSONUnserializable
 {
     /**
      * Serialize the array to BSON.
-     *
-     * @return array
      */
     public function bsonSerialize(): array
     {
-        $values = [];
+        return Pipeline::with($this)
+            ->map(function ($value, string $key) {
+                if ($value instanceof \stdClass) {
+                    $value = (array)$value;
+                    unset($value['__value']);
+                } elseif (self::isAssoc($value)) {
+                    unset($value['__value']);
+                } else {
+                    $value = ['__value' => $value];
+                }
 
-        foreach ($this as $key => $value) {
-            if ($value instanceof \stdClass) {
-                $value = (array)$value;
-                unset($value['__value']);
-            } elseif (is_array($value) && array_keys($value) !== array_keys(array_keys($value))) { // is assoc array
-                unset($value['__value']);
-            } else {
-                $value = ['__value' => $value];
-            }
-
-            $values[] = ['__key' => $key] + $value;
-        }
-
-        return $values;
+                return ['__key' => $key] + $value;
+            })
+            ->values()
+            ->toArray();
     }
 
     /**
@@ -67,5 +68,16 @@ class BSONAssoc extends BSONArray implements Serializable, Unserializable
     public function jsonSerialize(): array
     {
         return $this->getArrayCopy();
+    }
+
+    /**
+     * Is value an associative array.
+     *
+     * @param mixed $value
+     * @return bool
+     */
+    protected static function isAssoc($value): bool
+    {
+        return is_array($value) && array_keys($value) !== array_keys(array_keys($value));
     }
 }

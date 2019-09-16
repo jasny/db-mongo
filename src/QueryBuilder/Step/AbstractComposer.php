@@ -12,6 +12,7 @@ use UnexpectedValueException;
 
 /**
  * Base class for compose step.
+ * @immutable
  */
 abstract class AbstractComposer
 {
@@ -22,9 +23,6 @@ abstract class AbstractComposer
 
     /**
      * Invoke the composer.
-     *
-     * @param iterable $iterable
-     * @return \Generator
      */
     public function __invoke(iterable $iterable): \Generator
     {

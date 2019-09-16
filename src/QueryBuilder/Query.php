@@ -6,18 +6,19 @@ use Improved\IteratorPipeline\Pipeline;
 
 /**
  * Accumulator for MongoDB query builder.
+ * @option
  */
 class Query
 {
     /**
      * @var array<string, mixed>
      */
-    protected $options;
+    protected array $options;
 
     /**
      * @var array<string, array>
      */
-    protected $statements = [];
+    protected array $statements = [];
 
 
     /**
@@ -32,21 +33,18 @@ class Query
 
 
     /**
-     * Set MongoDB specific option
+     * Set MongoDB specific query option.
      *
      * @param string $name
      * @param mixed $value
      */
-    public function setOption(string $name, $value)
+    public function setOption(string $name, $value): void
     {
         $this->options[$name] = $value;
     }
 
     /**
      * Add a statement to the query.
-     *
-     * @param array $statement
-     * @return void
      */
     public function add(array $statement): void
     {
@@ -56,8 +54,6 @@ class Query
 
     /**
      * Get MongoDB query options.
-     *
-     * @return array
      */
     public function getOptions(): array
     {
@@ -66,17 +62,15 @@ class Query
 
     /**
      * Get all statements merged.
-     *
-     * @return array
      */
-    protected function getMergedStatements()
+    protected function getMergedStatements(): array
     {
         return Pipeline::with($this->statements)
             ->flatten(true)
-            ->group(function($value, string $key) {
+            ->group(function ($value, string $key) {
                 return $key;
             })
-            ->map(function(array $value, string $key) {
+            ->map(function (array $value, string $key) {
                 return $key[0] === '$' ? array_merge(...$value) : end($value);
             })
             ->toArray();
@@ -84,14 +78,13 @@ class Query
 
     /**
      * Get MongoDB query statements.
-     *
-     * @return array
      */
     public function toArray(): array
     {
-        $hasOr = Pipeline::with($this->statements)->flatten(true)->hasAny(function($value, string $key) {
-            return $key === '$or';
-        });
+        $hasOr = Pipeline::with($this->statements)->flatten(true)
+            ->hasAny(function ($value, string $key) {
+                return $key === '$or';
+            });
 
         return $hasOr ? ['$and' => $this->statements] : $this->getMergedStatements();
     }

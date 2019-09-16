@@ -6,142 +6,91 @@ use Improved as i;
 use Improved\IteratorPipeline\Pipeline;
 use Improved\IteratorPipeline\PipelineBuilder;
 use Jasny\DB\Exception\InvalidOptionException;
-use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
-use Jasny\DB\QueryBuilder;
-use Jasny\DB\Write;
+use Jasny\DB\Mongo\QueryBuilder\FilterQueryBuilder;
+use Jasny\DB\Mongo\Result\ResultBuilder;
+use Jasny\DB\Option\OptionInterface;
+use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\Result;
-use Jasny\DB\Option;
 use Jasny\DB\Option\LimitOption;
+use Jasny\DB\Write\WriteInterface;
+use MongoDB\Collection;
 use UnexpectedValueException;
 
 /**
  * Fetch data from a MongoDB collection
  */
-class MongoWriter implements Write, Write\WithBuilders
+class MongoWriter implements WriteInterface
 {
     use Traits\SaveTrait;
     use Traits\UpdateTrait;
     use Traits\DeleteTrait;
 
-    /**
-     * @var QueryBuilder
-     */
-    protected $queryBuilder;
+    protected Collection $collection;
+
+    protected QueryBuilderInterface $queryBuilder;
+    protected QueryBuilderInterface $saveQueryBuilder;
+    protected QueryBuilderInterface $updateQueryBuilder;
+    protected PipelineBuilder $resultBuilder;
+
 
     /**
-     * @var QueryBuilder
+     * MongoWriter constructor.
      */
-    protected $saveQueryBuilder;
+    public function __construct(Collection $collection)
+    {
+        $this->collection = $collection;
+    }
 
     /**
-     * @var QueryBuilder
+     * Get the mongodb collection the associated with the writer.
+     *
+     * @return Collection
      */
-    protected $updateQueryBuilder;
+    public function getStorage(): Collection
+    {
+        return $this->collection;
+    }
+
 
     /**
-     * @var PipelineBuilder
+     * Create a copy with a modified property.
+     *
+     * @param string                                $prop
+     * @param QueryBuilderInterface|PipelineBuilder $builder
+     * @return static
      */
-    protected $resultBuilder;
+    protected function with(string $prop, $builder)
+    {
+        if (isset($this->{$prop}) && $this->{$prop} === $builder) {
+            return $this;
+        }
 
+        $clone = clone $this;
+        $clone->{$prop} = $builder;
+
+        return $clone;
+    }
 
     /**
      * Get the query builder.
-     *
-     * @return QueryBuilder
      */
-    public function getQueryBuilder(): QueryBuilder
+    public function getQueryBuilder(): QueryBuilderInterface
     {
-        if (!isset($this->queryBuilder)) {
-            $this->queryBuilder = DefaultBuilders::createFilterQueryBuilder();
-        }
+        $this->queryBuilder ??= new FilterQueryBuilder();
 
         return $this->queryBuilder;
     }
 
     /**
-     * Create a reader with a custom query builder.
+     * Create a writer with a custom query builder.
      *
-     * @param QueryBuilder $queryBuilder
+     * @param QueryBuilderInterface $builder
      * @return static
      */
-    public function withQueryBuilder(QueryBuilder $queryBuilder): self
+    public function withQueryBuilder(QueryBuilderInterface $builder): WriteInterface
     {
-        if ($this->queryBuilder === $queryBuilder) {
-            return $this;
-        }
-
-        $clone = clone $this;
-        $clone->queryBuilder = $queryBuilder;
-
-        return $clone;
+        return $this->with('queryBuilder', $builder);
     }
-
-
-    /**
-     * Get the query builder for saving new items
-     *
-     * @return QueryBuilder
-     */
-    public function getSaveQueryBuilder(): QueryBuilder
-    {
-        if (!isset($this->saveQueryBuilder)) {
-            $this->saveQueryBuilder = DefaultBuilders::createSaveQueryBuilder();
-        }
-
-        return $this->saveQueryBuilder;
-    }
-
-    /**
-     * Create a reader with a custom query builder.
-     *
-     * @param QueryBuilder $queryBuilder
-     * @return static
-     */
-    public function withSaveQueryBuilder(QueryBuilder $queryBuilder): self
-    {
-        if ($this->saveQueryBuilder === $queryBuilder) {
-            return $this;
-        }
-
-        $clone = clone $this;
-        $clone->saveQueryBuilder = $queryBuilder;
-
-        return $clone;
-    }
-
-
-    /**
-     * Get the query builder of updating items.
-     *
-     * @return QueryBuilder
-     */
-    public function getUpdateQueryBuilder(): QueryBuilder
-    {
-        if (!isset($this->updateQueryBuilder)) {
-            $this->updateQueryBuilder = DefaultBuilders::createUpdateQueryBuilder();
-        }
-
-        return $this->updateQueryBuilder;
-    }
-
-    /**
-     * Create a reader with a custom query builder.
-     *
-     * @param QueryBuilder $queryBuilder
-     * @return static
-     */
-    public function withUpdateQueryBuilder(QueryBuilder $queryBuilder): self
-    {
-        if ($this->updateQueryBuilder === $queryBuilder) {
-            return $this;
-        }
-
-        $clone = clone $this;
-        $clone->updateQueryBuilder = $queryBuilder;
-
-        return $clone;
-    }
-
 
     /**
      * Get the result builder.
@@ -150,9 +99,7 @@ class MongoWriter implements Write, Write\WithBuilders
      */
     public function getResultBuilder(): PipelineBuilder
     {
-        if (!isset($this->resultBuilder)) {
-            $this->resultBuilder = DefaultBuilders::createResultBuilder();
-        }
+        $this->resultBuilder ??= new ResultBuilder();
 
         return $this->resultBuilder;
     }
@@ -160,43 +107,27 @@ class MongoWriter implements Write, Write\WithBuilders
     /**
      * Create a reader with a custom result builder.
      *
-     * @param PipelineBuilder $resultBuilder
+     * @param PipelineBuilder $builder
      * @return static
      */
-    public function withResultBuilder(PipelineBuilder $resultBuilder): self
+    public function withResultBuilder(PipelineBuilder $builder): WriteInterface
     {
-        if ($this->resultBuilder === $resultBuilder) {
-            return $this;
-        }
-
-        $clone = clone $this;
-        $clone->resultBuilder = $resultBuilder;
-
-        return $clone;
+        return $this->with('resultBuilder', $builder);
     }
 
 
     /**
      * Combine multiple bulk write results into a single result.
-     *
-     * @param array $ids
-     * @param array $meta
-     * @return Result&iterable<array>
      */
     protected function createResult(array $ids, array $meta): Result
     {
-        $documents = Pipeline::with($ids)
-            ->cleanup()
-            ->map(function($id) {
-                return ['_id' => $id];
-            });
-
         /** @var Result $result */
-        $result = i\type_check(
-            $this->getResultBuilder()->with($documents),
-            Result::class,
-            new UnexpectedValueException()
-        );
+        $result = Pipeline::with($ids)
+            ->cleanup()
+            ->map(fn($id) => ['_id' => $id])
+            ->then(fn($documents) => $this->getResultBuilder()->with($documents));
+
+        i\type_check($result, Result::class, new UnexpectedValueException());
 
         return $result->withMeta($meta);
     }
@@ -204,17 +135,15 @@ class MongoWriter implements Write, Write\WithBuilders
     /**
      * Check limit to select 'One' or 'Many' variant of method.
      *
-     * @param string   $method
-     * @param Option[] $opts
+     * @param string            $method
+     * @param OptionInterface[] $opts
      * @return string
      */
-    protected function oneOrMany(string $method, array $opts): string
+    protected function oneOrMany(string $method, array $opts): \Closure
     {
         /** @var LimitOption|null $limit */
         $limit = Pipeline::with($opts)
-            ->filter(function($opt) {
-                return $opt instanceof LimitOption;
-            })
+            ->filter(fn($opt) => $opt instanceof LimitOption)
             ->last();
 
         if (isset($limit) && $limit->getLimit() !== 1) {
@@ -222,6 +151,8 @@ class MongoWriter implements Write, Write\WithBuilders
             throw new InvalidOptionException($msg);
         }
 
-        return $method . (isset($limit) ? 'One' : 'Many');
+        $method .= (isset($limit) ? 'One' : 'Many');
+
+        return \Closure::fromCallable([$this->getStorage(), $method]);
     }
 }

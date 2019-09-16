@@ -6,7 +6,8 @@ use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Exception\InvalidOptionException;
 use Jasny\DB\Option\FieldsOption;
 use Jasny\DB\Option\LimitOption;
-use Jasny\DB\Option;
+use Jasny\DB\Option\OptionInterface;
+use Jasny\DB\Option\SortOption;
 
 /**
  * Convert a query opts to a MongoDB options.
@@ -16,7 +17,7 @@ class OptionConverter
     /**
      * Convert a query opts to a MongoDB options.
      *
-     * @param Option[] $opts
+     * @param OptionInterface[] $opts
      * @return array<string, mixed>
      * @throws InvalidOptionException
      */
@@ -25,11 +26,9 @@ class OptionConverter
         return Pipeline::with($opts)
             ->map(\Closure::fromCallable([$this, 'convertOpt']))
             ->flatten(true)
-            ->group(function($value, string $key) {
-                return $key;
-            })
-            ->map(function($grouped) {
-                return array_reduce($grouped, function($carry, $item) {
+            ->group(fn($_, string $key) => $key)
+            ->map(function ($grouped) {
+                return array_reduce($grouped, function ($carry, $item) {
                     return is_array($carry) && is_array($item) ? array_merge($carry, $item) : $item;
                 }, null);
             })
@@ -39,7 +38,7 @@ class OptionConverter
     /**
      * Alias of `convert()`
      *
-     * @param Option[] $opts
+     * @param OptionInterface[] $opts
      * @return array<string, mixed>
      */
     final public function __invoke(array $opts): array
@@ -51,16 +50,18 @@ class OptionConverter
     /**
      * Convert a standard Jasny DB opt to a MongoDB option.
      *
-     * @param Option $opt
+     * @param OptionInterface $opt
      * @return array<string, int>
      * @throws InvalidOptionException
      */
-    protected function convertOpt(Option $opt): array
+    protected function convertOpt(OptionInterface $opt): array
     {
         if ($opt instanceof FieldsOption) {
-            return $opt->getType() === 'sort'
-                ? $this->convertSort($opt->getFields())
-                : $this->convertFields($opt->getType(), $opt->getFields());
+            return $this->convertFields($opt->getFields(), $opt->isNegated());
+        }
+
+        if ($opt instanceof SortOption) {
+            return $this->convertSort($opt->getFields());
         }
 
         if ($opt instanceof LimitOption) {
@@ -73,20 +74,16 @@ class OptionConverter
     /**
      * Convert fields / omit opt to MongoDB projection option.
      *
-     * @param string   $type    ('fields', 'omit')
      * @param string[] $fields
+     * @param bool     $negate
      * @return array<string, array<string, int>>
      */
-    protected function convertFields(string $type, array $fields): array
+    protected function convertFields(array $fields, bool $negate = false): array
     {
-        if (!in_array($type, ['fields', 'omit'])) {
-            throw new InvalidOptionException("Unknown query option '$type'");
-        }
-
         $projection = Pipeline::with($fields)
-            ->expectType('string', new InvalidOptionException())
+            ->typeCheck('string', new InvalidOptionException())
             ->flip()
-            ->fill($type === 'omit' ? -1 : 1)
+            ->fill($negate ? 0 : 1)
             ->toArray();
 
         return ['projection' => $projection];
@@ -96,19 +93,15 @@ class OptionConverter
      * Convert sort opt to MongoDB sort option.
      *
      * @param string[] $fields
-     * @return array<string, array<string, int>>
+     * @return array{sort => array<string, int>}
      */
     protected function convertSort(array $fields): array
     {
         $sort = Pipeline::with($fields)
-            ->expectType('string', new InvalidOptionException())
+            ->typeCheck('string', new InvalidOptionException())
             ->flip()
-            ->map(function($_, string $field) {
-                return $field[0] === '~' ? -1 : 1;
-            })
-            ->mapKeys(function(int $asc, string $field) {
-                return $asc < 0 ? substr($field, 1): $field;
-            })
+            ->map(fn($_, string $field) => ($field[0] === '~' ? -1 : 1))
+            ->mapKeys(fn(int $asc, string $field) => ($asc < 0 ? substr($field, 1) : $field))
             ->toArray();
 
         return ['sort' => $sort];

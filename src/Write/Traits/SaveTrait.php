@@ -1,11 +1,15 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Write\Traits;
 
 use Improved\IteratorPipeline\Pipeline;
-use Jasny\DB\QueryBuilder;
+use Jasny\DB\Mongo\QueryBuilder\SaveQueryBuilder;
+use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\Result;
-use Jasny\DB\Option;
+use Jasny\DB\Option\OptionInterface;
+use Jasny\DB\Write\WriteInterface;
 use MongoDB\BulkWriteResult;
 use MongoDB\Collection;
 
@@ -15,21 +19,37 @@ use MongoDB\Collection;
 trait SaveTrait
 {
     /**
-     * Get the query builder for saving new items
-     *
-     * @return QueryBuilder
+     * Get MongoDB collection object.
      */
-    abstract public function getSaveQueryBuilder(): QueryBuilder;
+    abstract public function getStorage(): Collection;
 
     /**
      * Combine multiple bulk write results into a single result.
-     *
-     * @param array $ids
-     * @param array $meta
-     * @return Result&iterable<array>
      */
     abstract protected function createResult(array $ids, array $meta): Result;
 
+    /**
+     * Get the query builder for saving new items
+     *
+     * @return QueryBuilderInterface
+     */
+    public function getSaveQueryBuilder(): QueryBuilderInterface
+    {
+        $this->saveQueryBuilder ??= new SaveQueryBuilder();
+
+        return $this->saveQueryBuilder;
+    }
+
+    /**
+     * Create a reader with a custom query builder.
+     *
+     * @param QueryBuilderInterface $builder
+     * @return static
+     */
+    public function withSaveQueryBuilder(QueryBuilderInterface $builder): WriteInterface
+    {
+        return $this->with('saveQueryBuilder', $builder);
+    }
 
     /**
      * Combine multiple bulk write results into a single result.
@@ -50,40 +70,54 @@ trait SaveTrait
             'acknowledged' => true
         ];
 
-        $sets = Pipeline::with($writeResults)
-            ->apply(function(BulkWriteResult $writeResult) use (&$meta) {
-                $meta['count'] += $writeResult->getDeletedCount() + $writeResult->getInsertedCount()
-                    + $writeResult->getModifiedCount() + $writeResult->getUpsertedCount();
-                $meta['deletedCount'] += $writeResult->getDeletedCount();
-                $meta['insertedCount'] += $writeResult->getInsertedCount();
-                $meta['matchedCount'] += $writeResult->getMatchedCount();
-                $meta['modifiedCount'] += $writeResult->getModifiedCount();
-                $meta['upsertedCount'] += $writeResult->getUpsertedCount();
-                $meta['acknowledged'] = $meta['acknowledged'] && $writeResult->isAcknowledged();
+        $ids = Pipeline::with($writeResults)
+            ->apply(function (BulkWriteResult $result) use (&$meta) {
+                $meta = $this->aggregateWriteResultMeta($meta, $result);
             })
-            ->map(function(BulkWriteResult $writeResult, int $i) use ($counts) {
-                $ids = $writeResult->getInsertedIds()
-                    + $writeResult->getUpsertedIds()
+            ->map(function (BulkWriteResult $result, int $i) use ($counts) {
+                $ids = $result->getInsertedIds()
+                    + $result->getUpsertedIds()
                     + array_fill(0, $counts[$i], null);
                 ksort($ids);
 
                 return $ids;
             })
+            ->flatten()
             ->toArray();
 
-        return $this->createResult(array_merge(...$sets), $meta);
+        return $this->createResult($ids, $meta);
+    }
+
+    /**
+     * Aggregate the meta from multiple bulk write actions
+     */
+    protected function aggregateWriteResultMeta(array $meta, BulkWriteResult $result): array
+    {
+        $meta['count'] += $result->getDeletedCount()
+            + $result->getInsertedCount()
+            + $result->getModifiedCount()
+            + $result->getUpsertedCount();
+
+        $meta['deletedCount'] += $result->getDeletedCount();
+        $meta['insertedCount'] += $result->getInsertedCount();
+        $meta['matchedCount'] += $result->getMatchedCount();
+        $meta['modifiedCount'] += $result->getModifiedCount();
+        $meta['upsertedCount'] += $result->getUpsertedCount();
+
+        $meta['acknowledged'] = $meta['acknowledged'] && $result->isAcknowledged();
+
+        return $meta;
     }
 
     /**
      * Save the data.
      * Returns an array with generated properties per entry.
      *
-     * @param Collection $storage
-     * @param iterable   $items
-     * @param Option[]   $opts
+     * @param iterable          $items
+     * @param OptionInterface[] $opts
      * @return Result&iterable<array>
      */
-    public function save($storage, iterable $items, array $opts = []): Result
+    public function save(iterable $items, array $opts = []): Result
     {
         $counts = [];
         $writeResults = [];
@@ -92,7 +126,7 @@ trait SaveTrait
 
         foreach ($batches as $batch) {
             $counts[] = count($batch);
-            $writeResults[] = $storage->bulkWrite($batch, ['ordered' => false]);
+            $writeResults[] = $this->getStorage()->bulkWrite($batch, ['ordered' => false]);
         }
 
         return $this->combineWriteResults($writeResults, $counts);

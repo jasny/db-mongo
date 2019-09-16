@@ -10,10 +10,7 @@ use PHPUnit\Framework\TestCase;
  */
 class BSONAssocTest extends TestCase
 {
-    /**
-     * @var array
-     */
-    protected $assoc = [
+    protected array $assoc = [
         'foo' => 42,
         'yoo-bar.color' => 'blue',
         'array' => ['hello', 'world'],
@@ -21,10 +18,7 @@ class BSONAssocTest extends TestCase
         'child2' => ['a' => 'AAA', 'b' => 'BBB'],
     ];
 
-    /**
-     * @var array
-     */
-    protected $document = [
+    protected array $document = [
         ['__key' => 'foo', '__value' => 42],
         ['__key' => 'yoo-bar.color', '__value' => 'blue'],
         ['__key' => 'array', '__value' => ['hello', 'world']],

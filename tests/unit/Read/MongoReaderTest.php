@@ -3,12 +3,12 @@
 namespace Jasny\DB\Mongo\Tests\Read;
 
 use Improved\IteratorPipeline\PipelineBuilder;
-use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
+use Jasny\DB\Mongo\QueryBuilder\FilterQueryBuilder;
 use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\Mongo\Read\MongoReader;
+use Jasny\DB\Mongo\Result\ResultBuilder;
 use Jasny\DB\Option as opt;
-use Jasny\DB\QueryBuilder;
-use Jasny\DB\QueryBuilder\StagedQueryBuilder;
+use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\Result;
 use MongoDB\Collection;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -20,12 +20,17 @@ use PHPUnit\Framework\TestCase;
 class MongoReaderTest extends TestCase
 {
     /**
+     * @var Collection|MockObject
+     */
+    protected $collection;
+
+    /**
      * @var MongoReader
      */
     protected $reader;
 
     /**
-     * @var QueryBuilder|MockObject
+     * @var QueryBuilderInterface|MockObject
      */
     protected $queryBuilder;
 
@@ -37,10 +42,12 @@ class MongoReaderTest extends TestCase
 
     public function setUp(): void
     {
-        $this->queryBuilder = $this->createMock(QueryBuilder::class);
+        $this->collection = $this->createMock(Collection::class);
+
+        $this->queryBuilder = $this->createMock(QueryBuilderInterface::class);
         $this->resultBuilder = $this->createMock(PipelineBuilder::class);
 
-        $this->reader = (new MongoReader)
+        $this->reader = (new MongoReader($this->collection))
             ->withQueryBuilder($this->queryBuilder)
             ->withResultBuilder($this->resultBuilder);
     }
@@ -48,26 +55,24 @@ class MongoReaderTest extends TestCase
 
     public function testGetQueryBuilder()
     {
-        $reader = new MongoReader();
+        $reader = new MongoReader($this->collection);
         $builder = $reader->getQueryBuilder();
 
-        $this->assertInstanceOf(StagedQueryBuilder::class, $builder);
-        $this->assertEquals(DefaultBuilders::createFilterQueryBuilder(), $builder);
+        $this->assertInstanceOf(FilterQueryBuilder::class, $builder);
     }
 
     public function testGetResultBuilder()
     {
-        $reader = new MongoReader();
+        $reader = new MongoReader($this->collection);
         $builder = $reader->getResultBuilder();
 
-        $this->assertInstanceOf(PipelineBuilder::class, $builder);
-        $this->assertEquals(DefaultBuilders::createResultBuilder(), $builder);
+        $this->assertInstanceOf(ResultBuilder::class, $builder);
     }
 
     public function testWithQueryBuilder()
     {
-        /** @var QueryBuilder|MockObject $builder */
-        $builder = $this->createMock(QueryBuilder::class);
+        /** @var QueryBuilderInterface|MockObject $builder */
+        $builder = $this->createMock(QueryBuilderInterface::class);
 
         $reader = $this->reader->withQueryBuilder($builder);
 
@@ -106,13 +111,11 @@ class MongoReaderTest extends TestCase
             ->with(['foo' => 42, 'color(not)' => 'blue'], [opt\limit(10)])
             ->willReturn($query);
 
-        /** @var Collection|MockObject $collection */
-        $collection = $this->createMock(Collection::class);
-        $collection->expects($this->once())->method('countDocuments')
+        $this->collection->expects($this->once())->method('countDocuments')
             ->with(['foo' => 42, 'color' => ['$ne' => 'blue']])
             ->willReturn(10);
 
-        $count = $this->reader->count($collection, ['foo' => 42, 'color(not)' => 'blue'], [opt\limit(10)]);
+        $count = $this->reader->count(['foo' => 42, 'color(not)' => 'blue'], [opt\limit(10)]);
 
         $this->assertEquals(10, $count);
     }
@@ -135,8 +138,7 @@ class MongoReaderTest extends TestCase
         ]);
 
         /** @var Collection|MockObject $collection */
-        $collection = $this->createMock(Collection::class);
-        $collection->expects($this->once())->method('find')
+        $this->collection->expects($this->once())->method('find')
             ->with(['foo' => 42, 'color' => ['$ne' => 'blue']])
             ->willReturn($cursor);
 
@@ -146,7 +148,7 @@ class MongoReaderTest extends TestCase
             ->with($cursor)
             ->willReturn($expected);
 
-        $result = $this->reader->fetch($collection, ['foo' => 42, 'color(not)' => 'blue'], [opt\limit(10)]);
+        $result = $this->reader->fetch(['foo' => 42, 'color(not)' => 'blue'], [opt\limit(10)]);
 
         $this->assertSame($expected, $result);
     }

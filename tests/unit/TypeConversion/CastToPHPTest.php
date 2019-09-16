@@ -2,15 +2,14 @@
 
 namespace Jasny\DB\Mongo\Tests\TypeConversion;
 
-use InvalidArgumentException;
 use Jasny\DB\Mongo\TypeConversion\CastToPHP;
 use Jasny\TestHelper;
 use MongoDB\BSON;
-use OverflowException;
 use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \Jasny\DB\Mongo\TypeConversion\CastToPHP
+ * @covers \Jasny\DB\Mongo\TypeConversion\AbstractTypeConversion
  */
 class CastToPHPTest extends TestCase
 {
@@ -125,8 +124,6 @@ class CastToPHPTest extends TestCase
 
     public function testRecursionCircularReference()
     {
-        $this->expectException(OverflowException::class);
-
         $objectA = new \stdClass();
         $objectB = new \stdClass();
 
@@ -134,7 +131,9 @@ class CastToPHPTest extends TestCase
         $objectB->a = $objectA;
 
         $cast = new CastToPHP();
-        $cast($objectA);
+        @$cast($objectA);
+
+        $this->assertLastError(E_USER_WARNING, "Unable to convert value; possible circular reference");
     }
 
     
@@ -151,7 +150,9 @@ class CastToPHPTest extends TestCase
                 return $new;
             }
 
-            public function jsonSerialize() {}
+            public function jsonSerialize()
+            {
+            }
         };
         $className = get_class($object);
 
@@ -216,6 +217,25 @@ class CastToPHPTest extends TestCase
         $this->assertLastError(E_USER_WARNING, "Won't cast object to '$className': class not marked as persistable");
     }
 
+    public function testWithPersistableThatMissesSetState()
+    {
+        $className = 'CastToPHP' . ucfirst(__FUNCTION__) . 'JsonSerializable';
+        $this->getMockBuilder(\JsonSerializable::class)
+            ->setMockClassName($className)
+            ->getMock();
+
+        $cast = (new CastToPHP)->withPersistable(\JsonSerializable::class);
+
+        $data = (object)['__pclass' => $className, 'foo' => 42];
+        $result = @$cast($data);
+
+        $this->assertInstanceOf(\stdClass::class, $result);
+        $this->assertEquals($data, $result);
+
+        $this->assertLastError(E_USER_WARNING, "Won't cast object to '$className': "
+            . "class doesn't have a __set_state() method");
+    }
+
 
     public function testWithBSON()
     {
@@ -241,16 +261,16 @@ class CastToPHPTest extends TestCase
 
     public function testWithBSONInvalidClass()
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
-        (new CastToPHP)->withBSON(\DateTime::class, function() {});
+        (new CastToPHP)->withBSON(\DateTime::class, fn() => null);
     }
 
     public function testWithBinaryInvalidType()
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
-        (new CastToPHP)->withBinary(1000, function() {});
+        (new CastToPHP)->withBinary(1000, fn() => null);
     }
 
     public function testWithBSONUnknown()

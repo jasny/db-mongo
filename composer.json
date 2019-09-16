@@ -17,15 +17,16 @@
         "source": "https://github.com/jasny/db-mongo"
     },
     "require": {
-        "php": ">=7.2.0",
+        "php": ">=7.4.0",
         "ext-mongodb": "^1.4.0",
         "ext-json": "*",
         "mongodb/mongodb": "^1.4",
         "improved/iterable": "~0.1",
-        "jasny/db": "dev-master as 3.0.0"
+        "jasny/db": "~3.0.0"
     },
     "require-dev": {
-        "jasny/php-code-quality": "^2.5"
+        "jasny/php-code-quality": "^2.5",
+        "squizlabs/php_codesniffer": "dev-master#c436252a6edc2cd3c9ce3a846ae3ba0f52d30815 as 3.5.0"
     },
     "autoload": {
         "psr-4": {
@@ -34,13 +35,13 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Jasny\\DB\\Mongo\\Tests\\": "tests/"
+            "Jasny\\DB\\Mongo\\Tests\\": "tests/unit"
         }
     },
     "scripts": {
         "test": [
             "phpstan analyse",
-            "phpunit",
+            "phpunit --testdox --colors=always",
             "phpcs -p src"
         ]
     },

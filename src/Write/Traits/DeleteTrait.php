@@ -4,12 +4,11 @@ namespace Jasny\DB\Mongo\Write\Traits;
 
 use Improved as i;
 use Jasny\DB\Mongo\QueryBuilder\Query;
-use Jasny\DB\QueryBuilder;
+use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\Result;
-use Jasny\DB\Option;
+use Jasny\DB\Option\OptionInterface;
 use MongoDB\Collection;
 use MongoDB\DeleteResult;
-use UnexpectedValueException;
 
 /**
  * Delete data from a MongoDB collection.
@@ -17,11 +16,16 @@ use UnexpectedValueException;
 trait DeleteTrait
 {
     /**
+     * Get MongoDB collection object.
+     */
+    abstract public function getStorage(): Collection;
+
+    /**
      * Get the query builder.
      *
-     * @return QueryBuilder
+     * @return QueryBuilderInterface
      */
-    abstract public function getQueryBuilder(): QueryBuilder;
+    abstract public function getQueryBuilder(): QueryBuilderInterface;
 
     /**
      * Combine multiple bulk write results into a single result.
@@ -35,8 +39,8 @@ trait DeleteTrait
     /**
      * Check limit to select 'One' or 'Many' variant of method.
      *
-     * @param string   $method
-     * @param Option[] $opts
+     * @param string            $method
+     * @param OptionInterface[] $opts
      * @return string
      */
     abstract protected function oneOrMany(string $method, array $opts): string;
@@ -45,24 +49,23 @@ trait DeleteTrait
     /**
      * Query and delete records.
      *
-     * @param Collection $storage
-     * @param array      $filter
-     * @param Option[]   $opts
+     * @param array             $filter
+     * @param OptionInterface[] $opts
      * @return Result
      */
-    public function delete($storage, array $filter, array $opts = []): Result
+    public function delete(array $filter, array $opts = []): Result
     {
         /** @var Query $query */
         $query = i\type_check(
             $this->getQueryBuilder()->buildQuery($filter, $opts),
             Query::class,
-            new UnexpectedValueException()
+            new \UnexpectedValueException()
         );
 
-        $method = $this->oneOrMany('delete', $opts);
+        $delete = $this->oneOrMany('delete', $opts);
 
         /** @var DeleteResult $deleteResult */
-        $deleteResult = $storage->$method($query->toArray(), $query->getOptions());
+        $deleteResult = $delete($query->toArray(), $query->getOptions());
 
         $meta = [
             'count' => $deleteResult->getDeletedCount(),

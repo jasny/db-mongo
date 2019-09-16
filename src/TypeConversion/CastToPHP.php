@@ -1,28 +1,26 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\TypeConversion;
 
-use Closure;
-use DateTimeImmutable;
 use Improved as i;
 use MongoDB\BSON;
-use stdClass;
-use UnexpectedValueException;
 
 /**
  * Convert MongoDB type to PHP type.
  */
-class CastToPHP
+class CastToPHP extends AbstractTypeConversion
 {
     /**
      * @var array<string, callable>
      */
-    protected $persistable = [];
+    protected array $persistable = [];
 
     /**
      * @var array<callable>
      */
-    protected $bsonConversions = [];
+    protected array $bsonConversions = [];
 
 
     /**
@@ -30,29 +28,24 @@ class CastToPHP
      */
     public function __construct()
     {
-        $toDateTime = Closure::fromCallable([$this, 'toDateTime'])->bindTo(null);
-        $this->bsonConversions[BSON\UTCDateTime::class] = $toDateTime;
+        $this->bsonConversions[BSON\UTCDateTime::class] = \Closure::fromCallable([$this, 'toDateTime']);
 
-        $toString = Closure::fromCallable([$this, 'toString'])->bindTo(null);
-        $this->bsonConversions[BSON\ObjectId::class] = $toString;
-        $this->bsonConversions[BSON\Binary::class] = $toString;
+        $this->bsonConversions[BSON\ObjectId::class] = fn($bson) => (string)$bson;
+        $this->bsonConversions[BSON\Binary::class] = fn($bson) => (string)$bson;
     }
 
 
     /**
      * Create service which persist objects of a class as if it implemented the BSON\Persistable interface.
+     * If no $convert callback if specified, the `__set_state` method of the class is used.
      *
-     * @param string   $class
-     * @param callable $convert  Callback to convert associative array to object
+     * @param string        $class
+     * @param callable|null $convert  Callback to convert associative array to object.
      * @return static
      */
     public function withPersistable(string $class, ?callable $convert = null)
     {
-        $convert = $convert ?? (function(string $class, array $data) {
-            return method_exists($class,'__set_state')
-                ? $class::__set_state($data)
-                : new $class($data);
-        })->bindTo(null);
+        $convert ??= \Closure::fromCallable([$this, 'classSetState']);
 
         $clone = clone $this;
         $clone->persistable[$class] = $convert;
@@ -61,7 +54,7 @@ class CastToPHP
     }
 
     /**
-     * Create service which can convert a BSON types to a PHP type
+     * Create service which can convert a BSON types to a PHP type.
      *
      * @param string   $class    Class name or resource type (eg "stream resource")
      * @param callable $convert  Callback to convert BSON type
@@ -80,7 +73,7 @@ class CastToPHP
     }
 
     /**
-     * Create service which can convert a BSON binary to a PHP type
+     * Create service which can convert a BSON binary to a PHP type.
      *
      * @param int      $type     A MongoDB\BSON\Binary::TYPE_* constant or 128 to 256
      * @param callable $convert  Callback to convert BSON type
@@ -98,35 +91,6 @@ class CastToPHP
         return $clone;
     }
 
-
-    /**
-     * Recursively convert BSON to PHP
-     *
-     * @param iterable|stdClass $item
-     * @param int $depth
-     * @return iterable|stdClass
-     */
-    protected function applyRecursive($item, int $depth = 0)
-    {
-        if ($depth >= 32) {
-            throw new \OverflowException("Unable to convert MongoDB type to value; possible circular reference");
-        }
-
-        $iterable = $item instanceof stdClass ? (array)$item : $item;
-
-        $generator = i\iterable_map($iterable, function($value) use ($depth) {
-            return $this->convertValue($value, $depth + 1); // recursion
-        });
-
-        if ($item instanceof \Traversable) {
-            return $generator;
-        }
-
-        $array = i\iterable_to_array($generator, true);
-
-        return $item instanceof stdClass ? (object)$array : $array;
-    }
-
     /**
      * Convert a MongoDB type to normal PHP value.
      *
@@ -140,16 +104,21 @@ class CastToPHP
             return $value; // Quick return
         }
 
-        if ($value instanceof stdClass && isset($value->__pclass)) {
-            $value = $this->convertPersistable($value);
-        }
+        try {
+            if ($value instanceof \stdClass && isset($value->__pclass)) {
+                $value = $this->convertPersistable($value);
+            }
 
-        if ($value instanceof BSON\Type) {
-            $value = $this->convertBSON($value);
-        }
+            if ($value instanceof BSON\Type) {
+                $value = $this->convertBSON($value);
+            }
 
-        if (is_iterable($value) || $value instanceof stdClass) {
-            $value = $this->applyRecursive($value, $depth);
+            if (is_iterable($value) || $value instanceof \stdClass) {
+                $value = $this->applyRecursive($value, $depth);
+            }
+        } catch (\Exception $exception) {
+            // Soft fail when value can't be converted.
+            trigger_error($exception->getMessage(), E_USER_WARNING);
         }
 
         return $value;
@@ -157,36 +126,32 @@ class CastToPHP
 
 
     /**
-     * Cast persistable stdClass object
+     * Cast persistable object from MongoDB back to original class.
      *
-     * @param stdClass $value
+     * @param \stdClass $value
      * @return object
      */
-    protected function convertPersistable(stdClass $value)
+    protected function convertPersistable(\stdClass $value)
     {
         $pclass = $value->__pclass;
 
-        $convert = i\iterable_find($this->persistable, function($callback, $persistable) use ($pclass) {
+        $convert = i\iterable_find($this->persistable, function ($callback, $persistable) use ($pclass) {
             return is_a($pclass, $persistable, true);
         });
 
         if ($convert === null) {
-            $msg = "Won't cast object to '{$value->__pclass}': class not marked as persistable";
-            trigger_error($msg, E_USER_WARNING);
-            return $value;
+            throw new \UnexpectedValueException(
+                "Won't cast object to '{$value->__pclass}': class not marked as persistable"
+            );
         }
 
         $data = (array)$value;
         unset($data['__pclass']);
         $class = $value->__pclass;
 
-        $object = i\type_check(
-            ($convert)($class, $data),
-            $class,
-            new UnexpectedValueException()
-        );
+        $object = ($convert)($class, $data);
 
-        return $object;
+        return i\type_check($object, $class, new \UnexpectedValueException());
     }
 
     /**
@@ -202,8 +167,7 @@ class CastToPHP
             : get_class($value);
 
         if (!isset($this->bsonConversions[$type])) {
-            trigger_error("Unable to convert $type object to PHP type", E_USER_WARNING);
-            return $value;
+            throw new \UnexpectedValueException("Unable to convert $type object to PHP type");
         }
 
         return ($this->bsonConversions[$type])($value);
@@ -212,27 +176,27 @@ class CastToPHP
 
     /**
      * Convert BSON UTCDateTime to DateTime object.
-     *
-     * @param BSON\UTCDateTime $bsonDate
-     * @return \DateTimeImmutable
-     * @throws \Exception
      */
     protected function toDateTime(BSON\UTCDateTime $bsonDate): \DateTimeImmutable
     {
-        return (new DateTimeImmutable())->setTimestamp($bsonDate->toDateTime()->getTimestamp());
+        return (new \DateTimeImmutable())->setTimestamp($bsonDate->toDateTime()->getTimestamp());
     }
 
     /**
-     * Convert BSON object to string
+     * Convert persisted object back to original class using __set_state().
      *
-     * @param BSON\Type $bson
-     * @return string
+     * @param string $class
+     * @param array  $data
+     * @return object|array
      */
-    protected function toString(BSON\Type $bson): string
+    protected function classSetState(string $class, array $data)
     {
-        return (string)$bson;
-    }
+        if (!method_exists($class, '__set_state')) {
+            throw new \LogicException("Won't cast object to '{$class}': class doesn't have a __set_state() method");
+        }
 
+        return ([$class, '__set_state'])($data);
+    }
 
     /**
      * Invoke conversion

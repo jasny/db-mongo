@@ -1,45 +1,46 @@
-<?php declare(strict_types=1);
+<?php
+declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\TypeConversion;
 
-use DateTimeInterface;
 use Improved as i;
 use MongoDB\BSON;
-use UnexpectedValueException;
 
 /**
  * Cast PHP type to MongoDB type.
  */
-class CastToMongo
+class CastToMongo extends AbstractTypeConversion
 {
     /**
      * @var array<string, callable>
      */
-    protected $conversions = [];
+    protected array $conversions = [];
 
 
+    /**
+     * CastToMongo constructor.
+     */
     public function __construct()
     {
-        $toBsonDateTime = \Closure::fromCallable([$this, 'toBsonDateTime'])->bindTo(null);
-        $this->conversions[\DateTimeInterface::class] = $toBsonDateTime;
+        $this->conversions[\DateTimeInterface::class] = fn($date) => $this->toBsonDateTime($date);
     }
 
     /**
      * Create service which persist objects of a class as if it implemented the BSON\Persistable interface.
      * Classes that are Traversable or extend stdClass, can't implement custom logic.
      *
-     * @param string   $class
-     * @param callable $convert  Callback to convert object to associative array
+     * @param string        $class
+     * @param callable|null $convert  Callback to convert object to associative array
      * @return static
      */
     public function withPersistable(string $class, ?callable $convert = null)
     {
-        $callback = (function($object) use ($convert) {
+        $callback = static function ($object) use ($convert) {
             $values = isset($convert) ? $convert($object) : get_object_vars($object);
-            i\type_check($values, ['array'], new UnexpectedValueException());
+            i\type_check($values, ['array'], new \UnexpectedValueException());
 
             return ['__pclass' => get_class($object)] + $values;
-        })->bindTo(null);
+        };
 
         return $this->withConversion($class, $callback);
     }
@@ -47,7 +48,7 @@ class CastToMongo
     /**
      * Create service which can convert specified class or resource.
      *
-     * @param string   $type         Class name or resource type (eg "stream resource")
+     * @param string   $type     Class name or resource type (eg "stream resource")
      * @param callable $convert
      * @return static
      */
@@ -74,7 +75,7 @@ class CastToMongo
 
         $iterable = $item instanceof \stdClass ? (array)$item : $item;
 
-        $generator = i\iterable_map($iterable, function($value) use ($depth) {
+        $generator = i\iterable_map($iterable, function ($value) use ($depth) {
             return $this->convertValue($value, $depth + 1); // recursion
         });
 
@@ -94,7 +95,7 @@ class CastToMongo
      * @param int   $depth
      * @return mixed
      */
-    protected function convertValue($value, $depth = 0)
+    protected function convertValue($value, int $depth = 1)
     {
         if (is_scalar($value) || $value === null || $value instanceof BSON\Type) {
             return $value; // Quick return
@@ -145,7 +146,7 @@ class CastToMongo
      */
     protected function convertObject(object $value)
     {
-        $convert = i\iterable_find($this->conversions, function($callable, string $class) use ($value) {
+        $convert = i\iterable_find($this->conversions, function ($callable, string $class) use ($value) {
             return is_a($value, $class);
         });
 
@@ -161,10 +162,10 @@ class CastToMongo
     /**
      * Convert DateTime object to BSON UTCDateTime.
      *
-     * @param DateTimeInterface $date
+     * @param \DateTimeInterface $date
      * @return BSON\UTCDateTime
      */
-    protected function toBsonDateTime(DateTimeInterface $date): BSON\UTCDateTime
+    protected function toBsonDateTime(\DateTimeInterface $date): BSON\UTCDateTime
     {
         return new BSON\UTCDateTime($date->getTimestamp() * 1000);
     }

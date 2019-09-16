@@ -5,12 +5,14 @@ namespace Jasny\DB\Mongo\Tests\Writer;
 use Improved as i;
 use Improved\IteratorPipeline\PipelineBuilder;
 use Jasny\DB\Exception\InvalidOptionException;
+use Jasny\DB\Mongo\QueryBuilder\FilterQueryBuilder;
 use Jasny\DB\Mongo\QueryBuilder\Query;
+use Jasny\DB\Mongo\QueryBuilder\SaveQueryBuilder;
+use Jasny\DB\Mongo\QueryBuilder\UpdateQueryBuilder;
+use Jasny\DB\Mongo\Result\ResultBuilder;
 use Jasny\DB\Option as opt;
-use Jasny\DB\Mongo\QueryBuilder\DefaultBuilders;
 use Jasny\DB\Mongo\Write\MongoWriter;
-use Jasny\DB\QueryBuilder;
-use Jasny\DB\QueryBuilder\StagedQueryBuilder;
+use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\Result;
 use Jasny\DB\Update as update;
 use MongoDB\BulkWriteResult;
@@ -34,17 +36,22 @@ class MongoWriterTest extends TestCase
     protected $writer;
 
     /**
-     * @var QueryBuilder|MockObject
+     * @var Collection|MockObject
+     */
+    protected $collection;
+
+    /**
+     * @var QueryBuilderInterface|MockObject
      */
     protected $filterQueryBuilder;
 
     /**
-     * @var QueryBuilder|MockObject
+     * @var QueryBuilderInterface|MockObject
      */
     protected $updateQueryBuilder;
 
     /**
-     * @var QueryBuilder|MockObject
+     * @var QueryBuilderInterface|MockObject
      */
     protected $saveQueryBuilder;
 
@@ -56,12 +63,14 @@ class MongoWriterTest extends TestCase
 
     public function setUp(): void
     {
-        $this->filterQueryBuilder = $this->createMock(QueryBuilder::class);
-        $this->updateQueryBuilder = $this->createMock(QueryBuilder::class);
-        $this->saveQueryBuilder = $this->createMock(QueryBuilder::class);
+        $this->collection = $this->createMock(Collection::class);
+
+        $this->filterQueryBuilder = $this->createMock(QueryBuilderInterface::class);
+        $this->updateQueryBuilder = $this->createMock(QueryBuilderInterface::class);
+        $this->saveQueryBuilder = $this->createMock(QueryBuilderInterface::class);
         $this->resultBuilder = $this->createMock(PipelineBuilder::class);
 
-        $this->writer = (new MongoWriter)
+        $this->writer = (new MongoWriter($this->collection))
             ->withQueryBuilder($this->filterQueryBuilder)
             ->withUpdateQueryBuilder($this->updateQueryBuilder)
             ->withSaveQueryBuilder($this->saveQueryBuilder)
@@ -71,45 +80,41 @@ class MongoWriterTest extends TestCase
 
     public function testGetQueryBuilder()
     {
-        $writer = new MongoWriter();
+        $writer = new MongoWriter($this->collection);
         $builder = $writer->getQueryBuilder();
 
-        $this->assertInstanceOf(StagedQueryBuilder::class, $builder);
-        $this->assertEquals(DefaultBuilders::createFilterQueryBuilder(), $builder);
+        $this->assertInstanceOf(FilterQueryBuilder::class, $builder);
     }
 
     public function testGetUpdateQueryBuilder()
     {
-        $writer = new MongoWriter();
+        $writer = new MongoWriter($this->collection);
         $builder = $writer->getUpdateQueryBuilder();
 
-        $this->assertInstanceOf(StagedQueryBuilder::class, $builder);
-        $this->assertEquals(DefaultBuilders::createUpdateQueryBuilder(), $builder);
+        $this->assertInstanceOf(UpdateQueryBuilder::class, $builder);
     }
 
     public function testGetSaveQueryBuilder()
     {
-        $writer = new MongoWriter();
+        $writer = new MongoWriter($this->collection);
         $builder = $writer->getSaveQueryBuilder();
 
-        $this->assertInstanceOf(StagedQueryBuilder::class, $builder);
-        $this->assertEquals(DefaultBuilders::createSaveQueryBuilder(), $builder);
+        $this->assertInstanceOf(SaveQueryBuilder::class, $builder);
     }
 
     public function testGetResultBuilder()
     {
-        $writer = new MongoWriter();
+        $writer = new MongoWriter($this->collection);
         $builder = $writer->getResultBuilder();
 
-        $this->assertInstanceOf(PipelineBuilder::class, $builder);
-        $this->assertEquals(DefaultBuilders::createResultBuilder(), $builder);
+        $this->assertInstanceOf(ResultBuilder::class, $builder);
     }
 
 
     public function testWithQueryBuilder()
     {
-        /** @var QueryBuilder|MockObject $builder */
-        $builder = $this->createMock(QueryBuilder::class);
+        /** @var QueryBuilderInterface|MockObject $builder */
+        $builder = $this->createMock(QueryBuilderInterface::class);
 
         $writer = $this->writer->withQueryBuilder($builder);
 
@@ -117,14 +122,13 @@ class MongoWriterTest extends TestCase
         $this->assertNotSame($this->writer, $writer);
 
         $this->assertSame($builder, $writer->getQueryBuilder());
-
         $this->assertSame($writer, $writer->withQueryBuilder($builder), 'Idempotent');
     }
 
     public function testWithUpdateQueryBuilder()
     {
-        /** @var QueryBuilder|MockObject $builder */
-        $builder = $this->createMock(QueryBuilder::class);
+        /** @var QueryBuilderInterface|MockObject $builder */
+        $builder = $this->createMock(QueryBuilderInterface::class);
 
         $writer = $this->writer->withUpdateQueryBuilder($builder);
 
@@ -132,14 +136,13 @@ class MongoWriterTest extends TestCase
         $this->assertNotSame($this->writer, $writer);
 
         $this->assertSame($builder, $writer->getUpdateQueryBuilder());
-
         $this->assertSame($writer, $writer->withUpdateQueryBuilder($builder), 'Idempotent');
     }
 
     public function testWithSaveQueryBuilder()
     {
-        /** @var QueryBuilder|MockObject $builder */
-        $builder = $this->createMock(QueryBuilder::class);
+        /** @var QueryBuilderInterface|MockObject $builder */
+        $builder = $this->createMock(QueryBuilderInterface::class);
 
         $writer = $this->writer->withSaveQueryBuilder($builder);
 
@@ -147,7 +150,6 @@ class MongoWriterTest extends TestCase
         $this->assertNotSame($this->writer, $writer);
 
         $this->assertSame($builder, $writer->getSaveQueryBuilder());
-
         $this->assertSame($writer, $writer->withSaveQueryBuilder($builder), 'Idempotent');
     }
 
@@ -161,7 +163,6 @@ class MongoWriterTest extends TestCase
         $this->assertNotSame($this->writer, $writer);
 
         $this->assertSame($builder, $writer->getResultBuilder());
-
         $this->assertSame($writer, $writer->withResultBuilder($builder), 'Idempotent');
     }
 
@@ -191,7 +192,7 @@ class MongoWriterTest extends TestCase
         ];
 
         return [
-            [$documents, $batches]
+            'batches' => [$documents, $batches]
         ];
     }
 
@@ -226,16 +227,14 @@ class MongoWriterTest extends TestCase
         $writeResult2->expects($this->once())->method('getInsertedIds')->willReturn([1 => 43]);
         $writeResult2->expects($this->once())->method('getUpsertedIds')->willReturn([0 => 17]);
 
-        /** @var Collection|MockObject $collection */
-        $collection = $this->createMock(Collection::class);
-        $collection->expects($this->exactly(2))->method("bulkWrite")
+        $this->collection->expects($this->exactly(2))->method("bulkWrite")
             ->withConsecutive([$batches[0], ['ordered' => false]], [$batches[1], ['ordered' => false]])
             ->willReturnOnConsecutiveCalls($writeResult1, $writeResult2);
 
         $expectedResult = new Result([3 => ['id' => 10000]]);
 
         $this->resultBuilder->expects($this->once())->method('with')
-            ->with($this->callback(function(iterable $new) {
+            ->with($this->callback(function (iterable $new) {
                 $expected = [
                     0 => ['_id' => 10],
                     2 => ['_id' => 13],
@@ -250,7 +249,7 @@ class MongoWriterTest extends TestCase
             }))
             ->willReturn($expectedResult);
 
-        $result = $this->writer->save($collection, $documents, [opt\omit('wak')]);
+        $result = $this->writer->save($documents, [opt\omit('wak')]);
 
         $expectedMeta = [
             'count' => 105,
@@ -269,8 +268,8 @@ class MongoWriterTest extends TestCase
     public function oneOrManyProvider()
     {
         return [
-            ['One', 1, [opt\limit(1)]],
-            ['Many', 10, []],
+            'One' => ['One', 1, [opt\limit(1)]],
+            'Many' => ['Many', 10, []],
         ];
     }
 
@@ -282,7 +281,7 @@ class MongoWriterTest extends TestCase
         $filterQuery = $this->createMock(Query::class);
         $filterQuery->expects($this->once())->method('toArray')
             ->willReturn(['foo' => 42, 'color' => ['$ne' => 'blue']]);
-        $filterQuery->expects( $this->once())->method('getOptions')
+        $filterQuery->expects($this->once())->method('getOptions')
             ->willReturn(['ack' => false]);
 
         $this->filterQueryBuilder->expects($this->once())->method('buildQuery')
@@ -292,7 +291,7 @@ class MongoWriterTest extends TestCase
         $updateQuery = $this->createMock(Query::class);
         $updateQuery->expects($this->once())->method('toArray')
             ->willReturn(['$set' => ['color' => 'green']]);
-        $updateQuery->expects( $this->once())->method('getOptions')
+        $updateQuery->expects($this->once())->method('getOptions')
             ->willReturn(['w' => 1]);
 
         $this->updateQueryBuilder->expects($this->once())->method('buildQuery')
@@ -307,9 +306,7 @@ class MongoWriterTest extends TestCase
         $updateResult->expects($this->atLeastOnce())->method('isAcknowledged')->willReturn(false);
         $updateResult->expects($this->once())->method('getUpsertedId')->willReturn($count === 1 ? 12 : null);
 
-        /** @var Collection|MockObject $collection */
-        $collection = $this->createMock(Collection::class);
-        $collection->expects($this->once())->method("update{$oneOrMany}")
+        $this->collection->expects($this->once())->method("update{$oneOrMany}")
             ->with(
                 ['foo' => 42, 'color' => ['$ne' => 'blue']],
                 ['$set' => ['color' => 'green']],
@@ -320,7 +317,7 @@ class MongoWriterTest extends TestCase
         $expectedResult = new Result([['id' => 1000]]);
 
         $this->resultBuilder->expects($this->once())->method('with')
-            ->with($this->callback(function(iterable $new) use ($count) {
+            ->with($this->callback(function (iterable $new) use ($count) {
                 $actual = i\iterable_to_array($new, true);
                 $this->assertSame($count === 1 ? [['_id' => 12]] : [], $actual);
                 return true;
@@ -328,7 +325,6 @@ class MongoWriterTest extends TestCase
             ->willReturn($expectedResult);
 
         $result = $this->writer->update(
-            $collection,
             ['foo' => 42, 'color(not)' => 'blue'],
             [update\set('color', 'green')],
             $opts
@@ -354,7 +350,7 @@ class MongoWriterTest extends TestCase
         $query = $this->createMock(Query::class);
         $query->expects($this->once())->method('toArray')
             ->willReturn(['foo' => 42, 'color' => ['$ne' => 'blue']]);
-        $query->expects( $this->once())->method('getOptions')
+        $query->expects($this->once())->method('getOptions')
             ->willReturn(['ack' => false, 'w' => 1]);
 
         $this->filterQueryBuilder->expects($this->once())->method('buildQuery')
@@ -366,9 +362,7 @@ class MongoWriterTest extends TestCase
         $deleteResult->expects($this->atLeastOnce())->method('getDeletedCount')->willReturn($count);
         $deleteResult->expects($this->atLeastOnce())->method('isAcknowledged')->willReturn(false);
 
-        /** @var Collection|MockObject $collection */
-        $collection = $this->createMock(Collection::class);
-        $collection->expects($this->once())->method("delete{$oneOrMany}")
+        $this->collection->expects($this->once())->method("delete{$oneOrMany}")
             ->with(['foo' => 42, 'color' => ['$ne' => 'blue']], ['ack' => false, 'w' => 1])
             ->willReturn($deleteResult);
 
@@ -376,7 +370,7 @@ class MongoWriterTest extends TestCase
 
         $this->resultBuilder->expects($this->once())->method('with')->willReturn($expectedResult);
 
-        $result = $this->writer->delete($collection, ['foo' => 42, 'color(not)' => 'blue'], $opts);
+        $result = $this->writer->delete(['foo' => 42, 'color(not)' => 'blue'], $opts);
 
         $expectedMeta = [
             'count' => $count,
@@ -397,10 +391,9 @@ class MongoWriterTest extends TestCase
         $this->filterQueryBuilder->expects($this->once())->method('buildQuery')->willReturn(new Query());
         $this->updateQueryBuilder->expects($this->once())->method('buildQuery')->willReturn(new Query());
 
-        $collection = $this->createMock(Collection::class);
-        $collection->expects($this->never())->method("deleteOne");
-        $collection->expects($this->never())->method("deleteMany");
+        $this->collection->expects($this->never())->method("deleteOne");
+        $this->collection->expects($this->never())->method("deleteMany");
 
-        $this->writer->update($collection, [], [], [opt\limit(7)]);
+        $this->writer->update([], [], [opt\limit(7)]);
     }
 }
