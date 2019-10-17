@@ -11,6 +11,7 @@ use Jasny\DB\FieldMapping;
 use Jasny\DB\Mongo\Dataset;
 use Jasny\DB\Dataset\Sorted;
 use Jasny\DB\Entity\ChangeAware;
+use function Jasny\DB\Mongo\get_object_public_properties;
 
 /**
  * Static methods to interact with a collection (as document)
@@ -67,7 +68,7 @@ trait BasicImplementation
      */
     public function toData()
     {
-        $values = call_user_func('get_object_vars', $this); // `call_user_func` is used to only get public properties
+        $values = get_object_public_properties($this);
 
         foreach ($values as &$item) {
             if ($item instanceof Entity\Identifiable) {

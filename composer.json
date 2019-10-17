@@ -17,7 +17,7 @@
         "source": "https://github.com/jasny/db-mongo"
     },
     "require": {
-        "php": ">=5.6.0",
+        "php": ">=7.0",
         "ext-mongodb": "^1.4.0",
         "jasny/db": "^2.4.5",
         "doctrine/inflector": "^1.0",
@@ -29,6 +29,7 @@
     "autoload": {
         "psr-4": {
             "Jasny\\DB\\Mongo\\": "src/"
-        }
+        },
+        "files": ["src/functions.php"]
     }
 }
