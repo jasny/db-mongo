@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Write\Traits;
 
-use Improved\IteratorPipeline\Pipeline;
+use Improved as i;
+use Jasny\DB\Exception\BuildQueryException;
+use Jasny\DB\Mongo\Query\WriteQuery;
 use Jasny\DB\Mongo\QueryBuilder\SaveQueryBuilder;
-use Jasny\DB\QueryBuilder\QueryBuilderInterface;
-use Jasny\DB\Result;
 use Jasny\DB\Option\OptionInterface;
-use Jasny\DB\Write\WriteInterface;
+use Jasny\DB\QueryBuilder\QueryBuilderInterface;
+use Jasny\DB\QueryBuilder\StagedQueryBuilder;
+use Jasny\DB\Result\Result;
+use Jasny\DB\Result\ResultBuilder;
 use MongoDB\BulkWriteResult;
 use MongoDB\Collection;
 
@@ -18,20 +21,23 @@ use MongoDB\Collection;
  */
 trait SaveTrait
 {
+    protected QueryBuilderInterface $saveQueryBuilder;
+
     /**
      * Get MongoDB collection object.
      */
     abstract public function getStorage(): Collection;
 
     /**
-     * Combine multiple bulk write results into a single result.
+     * Get the result builder.
      */
-    abstract protected function createResult(array $ids, array $meta): Result;
+    abstract public function getResultBuilder(): ResultBuilder;
+
 
     /**
      * Get the query builder for saving new items
      *
-     * @return QueryBuilderInterface
+     * @return QueryBuilderInterface|StagedQueryBuilder
      */
     public function getSaveQueryBuilder(): QueryBuilderInterface
     {
@@ -41,94 +47,82 @@ trait SaveTrait
     }
 
     /**
-     * Create a reader with a custom query builder.
+     * Create a write with a custom query builder for save.
      *
      * @param QueryBuilderInterface $builder
      * @return static
      */
-    public function withSaveQueryBuilder(QueryBuilderInterface $builder): WriteInterface
+    public function withSaveQueryBuilder(QueryBuilderInterface $builder): self
     {
         return $this->with('saveQueryBuilder', $builder);
     }
 
+
     /**
-     * Combine multiple bulk write results into a single result.
+     * Save the one item.
+     * Returns a result with the generated id.
      *
-     * @param BulkWriteResult[] $writeResults
-     * @param int[]             $counts
-     * @return Result&iterable<array>
+     * @param object|array $item
+     * @param OptionInterface[] $opts
+     * @return Result
+     * @throws BuildQueryException
      */
-    protected function combineWriteResults(array $writeResults, array $counts): Result
+    public function save($item, array $opts = []): Result
     {
-        $meta = [
-            'count' => 0,
-            'deletedCount' => 0,
-            'insertedCount' => 0,
-            'matchedCount' => 0,
-            'modifiedCount' => 0,
-            'upsertedCount' => 0,
-            'acknowledged' => true
-        ];
+        return $this->saveAll([$item], $opts);
+    }
 
-        $ids = Pipeline::with($writeResults)
-            ->apply(function (BulkWriteResult $result) use (&$meta) {
-                $meta = $this->aggregateWriteResultMeta($meta, $result);
-            })
-            ->map(function (BulkWriteResult $result, int $i) use ($counts) {
-                $ids = $result->getInsertedIds()
-                    + $result->getUpsertedIds()
-                    + array_fill(0, $counts[$i], null);
-                ksort($ids);
+    /**
+     * Save multiple items.
+     * Returns a result with the generated ids.
+     *
+     * @param iterable          $items
+     * @param OptionInterface[] $opts
+     * @return Result
+     * @throws BuildQueryException
+     */
+    public function saveAll(iterable $items, array $opts = []): Result
+    {
+        $query = new WriteQuery(['ordered' => false]);
+        $this->getSaveQueryBuilder()->apply($query, $items, $opts);
 
-                return $ids;
-            })
-            ->flatten()
-            ->toArray();
+        $query->expectMethods('insertOne', 'replaceOne', 'updateOne');
+        $mongoOperations = $query->getOperations();
+        $mongoOptions = $query->getOptions();
 
-        return $this->createResult($ids, $meta);
+        $this->debug("%s.bulkWrite", ['operations' => $mongoOperations, 'options' => $mongoOptions]);
+
+        $writeResult = $this->getStorage()->bulkWrite($mongoOperations, $mongoOptions);
+
+        return $this->createSaveResult($query->getIndex(), $writeResult);
     }
 
     /**
      * Aggregate the meta from multiple bulk write actions
-     */
-    protected function aggregateWriteResultMeta(array $meta, BulkWriteResult $result): array
-    {
-        $meta['count'] += $result->getDeletedCount()
-            + $result->getInsertedCount()
-            + $result->getModifiedCount()
-            + $result->getUpsertedCount();
-
-        $meta['deletedCount'] += $result->getDeletedCount();
-        $meta['insertedCount'] += $result->getInsertedCount();
-        $meta['matchedCount'] += $result->getMatchedCount();
-        $meta['modifiedCount'] += $result->getModifiedCount();
-        $meta['upsertedCount'] += $result->getUpsertedCount();
-
-        $meta['acknowledged'] = $meta['acknowledged'] && $result->isAcknowledged();
-
-        return $meta;
-    }
-
-    /**
-     * Save the data.
-     * Returns an array with generated properties per entry.
      *
-     * @param iterable          $items
-     * @param OptionInterface[] $opts
-     * @return Result&iterable<array>
+     * @param array           $index
+     * @param BulkWriteResult $writeResult
+     * @return Result
      */
-    public function save(iterable $items, array $opts = []): Result
+    protected function createSaveResult(array $index, BulkWriteResult $writeResult): Result
     {
-        $counts = [];
-        $writeResults = [];
+        $meta = [];
 
-        $batches = $this->getSaveQueryBuilder()->buildQuery($items, $opts);
-
-        foreach ($batches as $batch) {
-            $counts[] = count($batch);
-            $writeResults[] = $this->getStorage()->bulkWrite($batch, ['ordered' => false]);
+        if ($writeResult->isAcknowledged()) {
+            $meta['count'] = $writeResult->getInsertedCount() + (int)$writeResult->getModifiedCount()
+                + $writeResult->getUpsertedCount();
+            $meta['matched'] = $writeResult->getMatchedCount();
+            $meta['inserted'] = $writeResult->getInsertedCount();
+            $meta['modified'] = $writeResult->getModifiedCount();
         }
 
-        return $this->combineWriteResults($writeResults, $counts);
+        $ids = $writeResult->getInsertedIds()
+            + $writeResult->getUpsertedIds()
+            + array_fill(0, count($index), null);
+        $documents = i\iterable_map($ids, fn($id) => ($id === null ? [] : ['_id' => $id]));
+
+        return $this->getResultBuilder()
+            ->with($documents, $meta)
+            ->setKeys($index);
     }
 }

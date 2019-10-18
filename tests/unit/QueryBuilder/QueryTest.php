@@ -2,14 +2,14 @@
 
 namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 
-use Jasny\DB\Mongo\QueryBuilder\Query;
+use Jasny\DB\Mongo\QueryBuilder\FilterQuery;
 use PHPUnit\Framework\TestCase;
 
 class QueryTest extends TestCase
 {
     public function testAdd()
     {
-        $query = new Query();
+        $query = new FilterQuery();
         $query->add(['foo' => 42, 'bar' => 99]);
         $query->add(['color' => 'blue']);
 
@@ -18,7 +18,7 @@ class QueryTest extends TestCase
 
     public function testAddOrStatement()
     {
-        $query = new Query();
+        $query = new FilterQuery();
         $query->add(['$or' => ['foo' => 42, 'bar' => 99]]);
         $query->add(['color' => 'blue']);
 
@@ -31,7 +31,7 @@ class QueryTest extends TestCase
 
     public function testOptions()
     {
-        $query = new Query(['limit' => 10]);
+        $query = new FilterQuery(['limit' => 10]);
         $query->setOption('skip', 40);
 
         $this->assertEquals(['limit' => 10, 'skip' => 40], $query->getOptions());

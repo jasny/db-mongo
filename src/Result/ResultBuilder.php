@@ -4,27 +4,21 @@ declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Result;
 
-use Improved\IteratorPipeline\PipelineBuilder;
 use Jasny\DB\FieldMap\ConfiguredFieldMap;
+use Jasny\DB\FieldMap\FieldMapInterface;
 use Jasny\DB\Mongo\TypeConversion\CastToPHP;
-use Jasny\DB\Result;
+use Jasny\DB\Result\ResultBuilder as Base;
 
 /**
- * Pipeline builder for a query result.
- * @immutable
+ * Default result builder for MongoDB results.
  */
-class ResultBuilder extends PipelineBuilder
+class ResultBuilder extends Base
 {
     /**
      * ResultBuilder constructor.
      */
-    public function __construct()
+    public function __construct(?FieldMapInterface $fieldMap = null)
     {
-        $configured = $this
-            ->map(new ConfiguredFieldMap(['_id' => 'id']))
-            ->then(new CastToPHP())
-            ->then(fn(iterable $iterable) => new Result($iterable));
-
-        $this->steps = $configured->steps;
+        parent::__construct($fieldMap ?? new ConfiguredFieldMap(['_id' => 'id']));
     }
 }

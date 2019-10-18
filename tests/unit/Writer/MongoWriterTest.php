@@ -5,13 +5,13 @@ namespace Jasny\DB\Mongo\Tests\Writer;
 use Improved as i;
 use Improved\IteratorPipeline\PipelineBuilder;
 use Jasny\DB\Exception\InvalidOptionException;
+use Jasny\DB\Mongo\QueryBuilder\FilterQuery;
 use Jasny\DB\Mongo\QueryBuilder\FilterQueryBuilder;
-use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\Mongo\QueryBuilder\SaveQueryBuilder;
 use Jasny\DB\Mongo\QueryBuilder\UpdateQueryBuilder;
 use Jasny\DB\Mongo\Result\ResultBuilder;
+use Jasny\DB\Mongo\Write\Writer;
 use Jasny\DB\Option as opt;
-use Jasny\DB\Mongo\Write\MongoWriter;
 use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\Result;
 use Jasny\DB\Update as update;
@@ -23,7 +23,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\Write\MongoWriter
+ * @covers \Jasny\DB\Mongo\Write\Writer
  * @covers \Jasny\DB\Mongo\Write\Traits\SaveTrait
  * @covers \Jasny\DB\Mongo\Write\Traits\UpdateTrait
  * @covers \Jasny\DB\Mongo\Write\Traits\DeleteTrait
@@ -31,7 +31,7 @@ use PHPUnit\Framework\TestCase;
 class MongoWriterTest extends TestCase
 {
     /**
-     * @var MongoWriter
+     * @var Writer
      */
     protected $writer;
 
@@ -70,7 +70,7 @@ class MongoWriterTest extends TestCase
         $this->saveQueryBuilder = $this->createMock(QueryBuilderInterface::class);
         $this->resultBuilder = $this->createMock(PipelineBuilder::class);
 
-        $this->writer = (new MongoWriter($this->collection))
+        $this->writer = (new Writer($this->collection))
             ->withQueryBuilder($this->filterQueryBuilder)
             ->withUpdateQueryBuilder($this->updateQueryBuilder)
             ->withSaveQueryBuilder($this->saveQueryBuilder)
@@ -80,7 +80,7 @@ class MongoWriterTest extends TestCase
 
     public function testGetQueryBuilder()
     {
-        $writer = new MongoWriter($this->collection);
+        $writer = new Writer($this->collection);
         $builder = $writer->getQueryBuilder();
 
         $this->assertInstanceOf(FilterQueryBuilder::class, $builder);
@@ -88,7 +88,7 @@ class MongoWriterTest extends TestCase
 
     public function testGetUpdateQueryBuilder()
     {
-        $writer = new MongoWriter($this->collection);
+        $writer = new Writer($this->collection);
         $builder = $writer->getUpdateQueryBuilder();
 
         $this->assertInstanceOf(UpdateQueryBuilder::class, $builder);
@@ -96,7 +96,7 @@ class MongoWriterTest extends TestCase
 
     public function testGetSaveQueryBuilder()
     {
-        $writer = new MongoWriter($this->collection);
+        $writer = new Writer($this->collection);
         $builder = $writer->getSaveQueryBuilder();
 
         $this->assertInstanceOf(SaveQueryBuilder::class, $builder);
@@ -104,7 +104,7 @@ class MongoWriterTest extends TestCase
 
     public function testGetResultBuilder()
     {
-        $writer = new MongoWriter($this->collection);
+        $writer = new Writer($this->collection);
         $builder = $writer->getResultBuilder();
 
         $this->assertInstanceOf(ResultBuilder::class, $builder);
@@ -118,7 +118,7 @@ class MongoWriterTest extends TestCase
 
         $writer = $this->writer->withQueryBuilder($builder);
 
-        $this->assertInstanceOf(MongoWriter::class, $writer);
+        $this->assertInstanceOf(Writer::class, $writer);
         $this->assertNotSame($this->writer, $writer);
 
         $this->assertSame($builder, $writer->getQueryBuilder());
@@ -132,7 +132,7 @@ class MongoWriterTest extends TestCase
 
         $writer = $this->writer->withUpdateQueryBuilder($builder);
 
-        $this->assertInstanceOf(MongoWriter::class, $writer);
+        $this->assertInstanceOf(Writer::class, $writer);
         $this->assertNotSame($this->writer, $writer);
 
         $this->assertSame($builder, $writer->getUpdateQueryBuilder());
@@ -146,7 +146,7 @@ class MongoWriterTest extends TestCase
 
         $writer = $this->writer->withSaveQueryBuilder($builder);
 
-        $this->assertInstanceOf(MongoWriter::class, $writer);
+        $this->assertInstanceOf(Writer::class, $writer);
         $this->assertNotSame($this->writer, $writer);
 
         $this->assertSame($builder, $writer->getSaveQueryBuilder());
@@ -159,7 +159,7 @@ class MongoWriterTest extends TestCase
 
         $writer = $this->writer->withResultBuilder($builder);
 
-        $this->assertInstanceOf(MongoWriter::class, $writer);
+        $this->assertInstanceOf(Writer::class, $writer);
         $this->assertNotSame($this->writer, $writer);
 
         $this->assertSame($builder, $writer->getResultBuilder());
@@ -278,7 +278,7 @@ class MongoWriterTest extends TestCase
      */
     public function testUpdate(string $oneOrMany, int $count, array $opts)
     {
-        $filterQuery = $this->createMock(Query::class);
+        $filterQuery = $this->createMock(FilterQuery::class);
         $filterQuery->expects($this->once())->method('toArray')
             ->willReturn(['foo' => 42, 'color' => ['$ne' => 'blue']]);
         $filterQuery->expects($this->once())->method('getOptions')
@@ -288,7 +288,7 @@ class MongoWriterTest extends TestCase
             ->with(['foo' => 42, 'color(not)' => 'blue'], $opts)
             ->willReturn($filterQuery);
 
-        $updateQuery = $this->createMock(Query::class);
+        $updateQuery = $this->createMock(FilterQuery::class);
         $updateQuery->expects($this->once())->method('toArray')
             ->willReturn(['$set' => ['color' => 'green']]);
         $updateQuery->expects($this->once())->method('getOptions')
@@ -347,7 +347,7 @@ class MongoWriterTest extends TestCase
      */
     public function testDelete(string $oneOrMany, int $count, array $opts)
     {
-        $query = $this->createMock(Query::class);
+        $query = $this->createMock(FilterQuery::class);
         $query->expects($this->once())->method('toArray')
             ->willReturn(['foo' => 42, 'color' => ['$ne' => 'blue']]);
         $query->expects($this->once())->method('getOptions')
@@ -388,8 +388,8 @@ class MongoWriterTest extends TestCase
         $this->expectException(InvalidOptionException::class);
         $this->expectExceptionMessage("MongoDB can update one document or all documents, but not exactly 7");
 
-        $this->filterQueryBuilder->expects($this->once())->method('buildQuery')->willReturn(new Query());
-        $this->updateQueryBuilder->expects($this->once())->method('buildQuery')->willReturn(new Query());
+        $this->filterQueryBuilder->expects($this->once())->method('buildQuery')->willReturn(new FilterQuery());
+        $this->updateQueryBuilder->expects($this->once())->method('buildQuery')->willReturn(new FilterQuery());
 
         $this->collection->expects($this->never())->method("deleteOne");
         $this->collection->expects($this->never())->method("deleteMany");

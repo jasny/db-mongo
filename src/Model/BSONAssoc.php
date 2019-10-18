@@ -8,11 +8,11 @@ use Improved\IteratorPipeline\Pipeline;
 use MongoDB\BSON\Serializable as BSONSerializable;
 use MongoDB\BSON\Unserializable as BSONUnserializable;
 use MongoDB\Model\BSONArray;
+use function Jasny\DB\Mongo\Common\is_assoc;
 
 /**
  * BSON representation of an associative array.
  * The array is not converted to an object, instead the keys are added to the value.
- * @immutable
  */
 class BSONAssoc extends BSONArray implements BSONSerializable, BSONUnserializable
 {
@@ -26,7 +26,7 @@ class BSONAssoc extends BSONArray implements BSONSerializable, BSONUnserializabl
                 if ($value instanceof \stdClass) {
                     $value = (array)$value;
                     unset($value['__value']);
-                } elseif (self::isAssoc($value)) {
+                } elseif (is_assoc($value)) {
                     unset($value['__value']);
                 } else {
                     $value = ['__value' => $value];
@@ -63,11 +63,11 @@ class BSONAssoc extends BSONArray implements BSONSerializable, BSONUnserializabl
     /**
      * Serialize the array to JSON.
      *
-     * @return array
+     * @return \stdClass
      */
-    public function jsonSerialize(): array
+    public function jsonSerialize(): \stdClass
     {
-        return $this->getArrayCopy();
+        return (object)$this->getArrayCopy();
     }
 
     /**

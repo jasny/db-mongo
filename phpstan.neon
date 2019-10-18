@@ -1,6 +1,23 @@
 parameters:
-    level: 4
+    level: 7
     paths:
         - src
+    ignoreErrors:
+        - "/^Access to an undefined property object::\\$_id/"
+        - "/^Argument of an invalid type (iterable|array)\\|(object|stdClass) supplied for foreach, only iterables are supported/"
+        -
+            message: "/^Variable property access on/"
+            path: src/Common/ReadWriteTrait.php
+
+        # PHPStan bugs causing false positives
+        - "/^Return type \\([^\\)]++\\) of method [^:]++::with\\w+QueryBuilder\\(\\) should be covariant with return type/"
+        -
+            message: "/__set_state/"
+            path: src/TypeConversion/CastToPHP.php
+        -
+            message: "/^Method [^:]++::apply\\(\\) has parameter \\$value with no typehint specified/"
+            path: src/QueryBuilder/Compose/UpdateComposer.php
+    reportUnmatchedIgnoredErrors: false
+
 includes:
   	- vendor/phpstan/phpstan-strict-rules/rules.neon

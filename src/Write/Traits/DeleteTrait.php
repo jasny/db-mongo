@@ -2,13 +2,13 @@
 
 namespace Jasny\DB\Mongo\Write\Traits;
 
-use Improved as i;
-use Jasny\DB\Mongo\QueryBuilder\Query;
-use Jasny\DB\QueryBuilder\QueryBuilderInterface;
-use Jasny\DB\Result;
+use Jasny\DB\Exception\BuildQueryException;
+use Jasny\DB\Mongo\Query\FilterQuery;
 use Jasny\DB\Option\OptionInterface;
+use Jasny\DB\QueryBuilder\FilterQueryBuilder;
+use Jasny\DB\QueryBuilder\QueryBuilderInterface;
+use Jasny\DB\Result\Result;
 use MongoDB\Collection;
-use MongoDB\DeleteResult;
 
 /**
  * Delete data from a MongoDB collection.
@@ -21,58 +21,55 @@ trait DeleteTrait
     abstract public function getStorage(): Collection;
 
     /**
-     * Get the query builder.
+     * Get the query builder of updating items.
      *
      * @return QueryBuilderInterface
      */
-    abstract public function getQueryBuilder(): QueryBuilderInterface;
+    public function getDeleteQueryBuilder(): QueryBuilderInterface
+    {
+        $this->deleteQueryBuilder = (new FilterQueryBuilder());
+
+        return $this->updateQueryBuilder;
+    }
 
     /**
-     * Combine multiple bulk write results into a single result.
+     * Create a write with a custom query builder for save.
      *
-     * @param array $ids
-     * @param array $meta
-     * @return Result&iterable<array>
+     * @param QueryBuilderInterface $builder
+     * @return static
      */
-    abstract protected function createResult(array $ids, array $meta): Result;
-
-    /**
-     * Check limit to select 'One' or 'Many' variant of method.
-     *
-     * @param string            $method
-     * @param OptionInterface[] $opts
-     * @return string
-     */
-    abstract protected function oneOrMany(string $method, array $opts): string;
+    public function withUpdateQueryBuilder(QueryBuilderInterface $builder): self
+    {
+        return $this->with('updateQueryBuilder', $builder);
+    }
 
 
     /**
      * Query and delete records.
+     * The result will not contain any items, only meta data `count` with the number of deleted items.
      *
      * @param array             $filter
      * @param OptionInterface[] $opts
      * @return Result
+     * @throws BuildQueryException
      */
     public function delete(array $filter, array $opts = []): Result
     {
-        /** @var Query $query */
-        $query = i\type_check(
-            $this->getQueryBuilder()->buildQuery($filter, $opts),
-            Query::class,
-            new \UnexpectedValueException()
-        );
+        $query = new FilterQuery('delete');
+        $this->getQueryBuilder()->apply($query, $filter, $opts);
 
-        $delete = $this->oneOrMany('delete', $opts);
+        $method = $query->getExpectedMethod('deleteOne', 'deleteMany');
+        $mongoFilter = $query->toArray();
+        $mongoOptions = $query->getOptions();
 
-        /** @var DeleteResult $deleteResult */
-        $deleteResult = $delete($query->toArray(), $query->getOptions());
+        $this->debug("%s.$method", ['filter' => $mongoFilter, 'options' => $mongoOptions]);
 
-        $meta = [
-            'count' => $deleteResult->getDeletedCount(),
-            'deletedCount' => $deleteResult->getDeletedCount(),
-            'acknowledged' => $deleteResult->isAcknowledged()
-        ];
+        $deleteResult = $method === 'deleteOne'
+            ? $this->getStorage()->deleteOne($mongoFilter, $mongoOptions)
+            : $this->getStorage()->deleteMany($mongoFilter, $mongoOptions);
 
-        return $this->createResult([], $meta);
+        $meta = $deleteResult->isAcknowledged() ? ['count' => $deleteResult->getDeletedCount()] : [];
+
+        return new Result([], $meta);
     }
 }

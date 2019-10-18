@@ -3,9 +3,9 @@
 namespace Jasny\DB\Mongo\Tests\Read;
 
 use Improved\IteratorPipeline\PipelineBuilder;
+use Jasny\DB\Mongo\QueryBuilder\FilterQuery;
 use Jasny\DB\Mongo\QueryBuilder\FilterQueryBuilder;
-use Jasny\DB\Mongo\QueryBuilder\Query;
-use Jasny\DB\Mongo\Read\MongoReader;
+use Jasny\DB\Mongo\Read\Reader;
 use Jasny\DB\Mongo\Result\ResultBuilder;
 use Jasny\DB\Option as opt;
 use Jasny\DB\QueryBuilder\QueryBuilderInterface;
@@ -15,7 +15,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\Read\MongoReader
+ * @covers \Jasny\DB\Mongo\Read\Reader
  */
 class MongoReaderTest extends TestCase
 {
@@ -25,7 +25,7 @@ class MongoReaderTest extends TestCase
     protected $collection;
 
     /**
-     * @var MongoReader
+     * @var Reader
      */
     protected $reader;
 
@@ -47,7 +47,7 @@ class MongoReaderTest extends TestCase
         $this->queryBuilder = $this->createMock(QueryBuilderInterface::class);
         $this->resultBuilder = $this->createMock(PipelineBuilder::class);
 
-        $this->reader = (new MongoReader($this->collection))
+        $this->reader = (new Reader($this->collection))
             ->withQueryBuilder($this->queryBuilder)
             ->withResultBuilder($this->resultBuilder);
     }
@@ -55,7 +55,7 @@ class MongoReaderTest extends TestCase
 
     public function testGetQueryBuilder()
     {
-        $reader = new MongoReader($this->collection);
+        $reader = new Reader($this->collection);
         $builder = $reader->getQueryBuilder();
 
         $this->assertInstanceOf(FilterQueryBuilder::class, $builder);
@@ -63,7 +63,7 @@ class MongoReaderTest extends TestCase
 
     public function testGetResultBuilder()
     {
-        $reader = new MongoReader($this->collection);
+        $reader = new Reader($this->collection);
         $builder = $reader->getResultBuilder();
 
         $this->assertInstanceOf(ResultBuilder::class, $builder);
@@ -76,7 +76,7 @@ class MongoReaderTest extends TestCase
 
         $reader = $this->reader->withQueryBuilder($builder);
 
-        $this->assertInstanceOf(MongoReader::class, $reader);
+        $this->assertInstanceOf(Reader::class, $reader);
         $this->assertNotSame($this->reader, $reader);
 
         $this->assertSame($builder, $reader->getQueryBuilder());
@@ -90,7 +90,7 @@ class MongoReaderTest extends TestCase
 
         $reader = $this->reader->withResultBuilder($builder);
 
-        $this->assertInstanceOf(MongoReader::class, $reader);
+        $this->assertInstanceOf(Reader::class, $reader);
         $this->assertNotSame($this->reader, $reader);
 
         $this->assertSame($builder, $reader->getResultBuilder());
@@ -101,7 +101,7 @@ class MongoReaderTest extends TestCase
 
     public function testCount()
     {
-        $query = $this->createMock(Query::class);
+        $query = $this->createMock(FilterQuery::class);
         $query->expects($this->once())->method('toArray')
             ->willReturn(['foo' => 42, 'color' => ['$ne' => 'blue']]);
         $query->expects($this->once())->method('getOptions')
@@ -122,7 +122,7 @@ class MongoReaderTest extends TestCase
 
     public function testFetch()
     {
-        $query = $this->createMock(Query::class);
+        $query = $this->createMock(FilterQuery::class);
         $query->expects($this->once())->method('toArray')
             ->willReturn(['foo' => 42, 'color' => ['$ne' => 'blue']]);
         $query->expects($this->once())->method('getOptions')

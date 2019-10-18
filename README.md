@@ -31,10 +31,10 @@ Usage
 
 ```php
 use Jasny\DB\Option as opts;
-use Jasny\DB\Mongo\Read\MongoReader;
+use Jasny\DB\Mongo\Read\Reader;
 
 $users = (new MongoDB\Client)->test->users;
-$reader = new MongoReader();
+$reader = new Reader();
 
 $list = $reader
     ->fetch(
@@ -57,12 +57,12 @@ $list = $reader
 #### Read and write
 
 ```php
-use Jasny\DB\Mongo\Read\MongoReader;
-use Jasny\DB\Mongo\Write\MongoWriter;
+use Jasny\DB\Mongo\Read\Reader;
+use Jasny\DB\Mongo\Write\Writer;
 
 $users = (new MongoDB\Client)->test->users;
-$reader = new MongoReader();
-$writer = new MongoWriter();
+$reader = new Reader();
+$writer = new Writer();
 
 $user = $reader->fetch($users, ['id' => '12345'])->first();
 $user->count = "bar";
@@ -73,10 +73,10 @@ $writer->save($users, [$user]);
 #### Update multiple
 
 ```php
-use Jasny\DB\Mongo\Write\MongoWriter;
+use Jasny\DB\Mongo\Write\Writer;
 
 $users = (new MongoDB\Client)->test->users;
-$writer = new MongoWriter;
+$writer = new Writer;
 
 $writer->update($users, (object)['access' => 1000], ['type' => 'admin']);
 ```
@@ -135,10 +135,10 @@ loading related data, sorting, etc. These options are passed to the query builde
 
 ```php
 use Jasny\DB\Option as opts;
-use Jasny\DB\Mongo\Read\MongoReader;
+use Jasny\DB\Mongo\Read\Reader;
 
 $users = (new MongoDB\Client)->test->users;
-$reader = new MongoReader;
+$reader = new Reader;
 
 $list = $reader
     ->fetch(
@@ -202,10 +202,10 @@ to further process the result.
 ```php
 use Improved\IteratorStream\CsvOutputStream;
 use Jasny\DB\Option as opts;
-use Jasny\DB\Mongo\Read\MongoReader;
+use Jasny\DB\Mongo\Read\Reader;
 
 $users = (new MongoDB\Client)->test->users;
-$reader = new MongoReader;
+$reader = new Reader;
 
 $handler = fopen('path/to/export/invited.csv');
 $outputToCSV = new CsvOutputStream($handler);
@@ -264,9 +264,9 @@ Query and update records.
 
 ```php
 use Jasny\DB\Update as update;
-use Jasny\DB\Mongo\Write\MongoWriter;
+use Jasny\DB\Mongo\Write\Writer;
 
-$writer = new MongoWriter();
+$writer = new Writer();
 $users = (MongoDB\Client)->tests->users;
 
 $writer->update($users, ['id' => 10], [update\set('last_login', new DateTime()), update\inc('logins')]);

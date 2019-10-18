@@ -5,8 +5,8 @@ namespace Jasny\DB\Mongo\Tests\QueryBuilder\Step;
 use Improved as i;
 use Improved\Iterator\CombineIterator;
 use Jasny\DB\Exception\InvalidUpdateOperationException;
-use Jasny\DB\Mongo\QueryBuilder\Query;
-use Jasny\DB\Mongo\QueryBuilder\Step\UpdateComposer;
+use Jasny\DB\Mongo\QueryBuilder\Compose\UpdateComposer;
+use Jasny\DB\Mongo\QueryBuilder\FilterQuery;
 use OverflowException;
 use PHPUnit\Framework\TestCase;
 
@@ -14,8 +14,8 @@ use PHPUnit\Framework\TestCase;
  * The purpose of the compose step is to create callbacks that apply logic to the query object. To test if the callback
  *   works as expected, they're invoked as they would the during build step.
  *
- * @covers \Jasny\DB\Mongo\QueryBuilder\Step\AbstractComposer
- * @covers \Jasny\DB\Mongo\QueryBuilder\Step\UpdateComposer
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Compose\AbstractComposer
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Compose\UpdateComposer
  */
 class UpdateComposerTest extends TestCase
 {
@@ -39,7 +39,7 @@ class UpdateComposerTest extends TestCase
         $this->assertCount(1, $callbacks);
         $this->assertInstanceOf(\Closure::class, $callbacks[0]);
 
-        $query = $this->createMock(Query::class);
+        $query = $this->createMock(FilterQuery::class);
         $query->expects($this->once())->method('add')->with(['$set' => ['foo' => $value]]);
 
         // Emulate the build step
@@ -66,7 +66,7 @@ class UpdateComposerTest extends TestCase
         $this->assertCount(1, $callbacks);
         $this->assertInstanceOf(\Closure::class, $callbacks[0]);
 
-        $query = $this->createMock(Query::class);
+        $query = $this->createMock(FilterQuery::class);
         $query->expects($this->once())->method('add')
             ->with(['$set' => ['foo.one' => 'hi', 'foo.two.a' => 'AAA', 'foo.two.b' => 'BBB']]);
 
@@ -104,7 +104,7 @@ class UpdateComposerTest extends TestCase
         $this->assertCount(1, $callbacks);
         $this->assertInstanceOf(\Closure::class, $callbacks[0]);
 
-        $query = $this->createMock(Query::class);
+        $query = $this->createMock(FilterQuery::class);
         $query->expects($this->once())->method('add')->with([$expectedOp => ['foo' => $expectedValue]]);
 
         // Emulate the build step
@@ -139,7 +139,7 @@ class UpdateComposerTest extends TestCase
         $this->assertCount(1, $callbacks);
         $this->assertInstanceOf(\Closure::class, $callbacks[0]);
 
-        $query = $this->createMock(Query::class);
+        $query = $this->createMock(FilterQuery::class);
         $query->expects($this->once())->method('add')->with([$expectedOp => ['foo' => $expectedValue]]);
 
         // Emulate the build step
@@ -210,7 +210,7 @@ class UpdateComposerTest extends TestCase
 
         ['values' => $callbacks] = i\iterable_separate($iterator);
 
-        $query = $this->createMock(Query::class);
+        $query = $this->createMock(FilterQuery::class);
         ($callbacks[0])($query, $field, $operator, $value);
     }
 
@@ -232,7 +232,7 @@ class UpdateComposerTest extends TestCase
 
         ['values' => $callbacks] = i\iterable_separate($iterator);
 
-        $query = $this->createMock(Query::class);
+        $query = $this->createMock(FilterQuery::class);
         ($callbacks[0])($query, 'foo', 'set', $objectA);
     }
 }

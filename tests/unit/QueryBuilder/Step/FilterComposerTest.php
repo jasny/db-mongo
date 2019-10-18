@@ -5,14 +5,14 @@ namespace Jasny\DB\Mongo\Tests\QueryBuilder\Step;
 use Improved as i;
 use Improved\Iterator\CombineIterator;
 use Jasny\DB\Exception\InvalidFilterException;
-use Jasny\DB\Mongo\QueryBuilder\Step\FilterComposer;
-use Jasny\DB\Mongo\QueryBuilder\Query;
+use Jasny\DB\Mongo\QueryBuilder\Compose\FilterComposer;
+use Jasny\DB\Mongo\QueryBuilder\FilterQuery;
 use OverflowException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilder\Step\AbstractComposer
- * @covers \Jasny\DB\Mongo\QueryBuilder\Step\FilterComposer
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Compose\AbstractComposer
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Compose\FilterComposer
  */
 class FilterComposerTest extends TestCase
 {
@@ -49,7 +49,7 @@ class FilterComposerTest extends TestCase
         $this->assertCount(1, $callbacks);
         $this->assertInstanceOf(\Closure::class, $callbacks[0]);
 
-        $query = $this->createMock(Query::class);
+        $query = $this->createMock(FilterQuery::class);
         $query->expects($this->once())->method('add')->with(['foo' => $expected]);
 
         ($callbacks[0])($query, 'foo', $operator, 42);
@@ -106,7 +106,7 @@ class FilterComposerTest extends TestCase
 
         ['values' => $callbacks] = i\iterable_separate($iterator);
 
-        $query = $this->createMock(Query::class);
+        $query = $this->createMock(FilterQuery::class);
         ($callbacks[0])($query, $field, $operator, $value);
     }
 
@@ -128,7 +128,7 @@ class FilterComposerTest extends TestCase
 
         ['values' => $callbacks] = i\iterable_separate($iterator);
 
-        $query = $this->createMock(Query::class);
+        $query = $this->createMock(FilterQuery::class);
         ($callbacks[0])($query, 'foo', '', $objectA);
     }
 }

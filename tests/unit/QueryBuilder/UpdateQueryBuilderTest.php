@@ -2,11 +2,11 @@
 
 namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 
-use Jasny\DB\Mongo\QueryBuilder\Query;
+use Jasny\DB\Mongo\QueryBuilder\FilterQuery;
 use Jasny\DB\Mongo\QueryBuilder\UpdateQueryBuilder;
 use Jasny\DB\Option as opt;
-use Jasny\DB\Update as update;
 use Jasny\DB\QueryBuilder\StagedQueryBuilder;
+use Jasny\DB\Update as update;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -19,7 +19,7 @@ class UpdateQueryBuilderTest extends TestCase
         $builder = new UpdateQueryBuilder();
         $this->assertInstanceOf(StagedQueryBuilder::class, $builder);
 
-        /** @var Query $query */
+        /** @var FilterQuery $query */
         $query = $builder->buildQuery(
             [
                 update\set('id', 10),
@@ -30,7 +30,7 @@ class UpdateQueryBuilderTest extends TestCase
             [opt\limit(1)]
         );
 
-        $this->assertInstanceOf(Query::class, $query);
+        $this->assertInstanceOf(FilterQuery::class, $query);
 
         $expected = ['$set' => ['_id' => 10, 'foo' => 42, 'bar.one' => 1, 'bar.two' => 2], '$inc' => ['count' => 1]];
         $this->assertEquals($expected, $query->toArray());

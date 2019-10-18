@@ -3,11 +3,11 @@
 namespace Jasny\DB\Mongo\Tests\QueryBuilder\Step;
 
 use Improved as i;
-use Jasny\DB\Mongo\QueryBuilder\Step\SaveQueryBuildStep;
+use Jasny\DB\Mongo\QueryBuilder\Compose\BuildWriteQuery;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilder\Step\SaveQueryBuildStep
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Compose\BuildWriteQuery
  */
 class SaveQueryBuildStepTest extends TestCase
 {
@@ -29,7 +29,7 @@ class SaveQueryBuildStepTest extends TestCase
             ]
         ];
 
-        $build = new SaveQueryBuildStep();
+        $build = new BuildWriteQuery();
 
         $statements = $build($batches);
 

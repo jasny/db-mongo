@@ -3,9 +3,9 @@
 namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 
 use Jasny\DB\Exception\InvalidOptionException;
+use Jasny\DB\Mongo\QueryBuilder\OptionConverter;
 use Jasny\DB\Option as opt;
 use Jasny\DB\Option\OptionInterface;
-use Jasny\DB\Mongo\QueryBuilder\OptionConverter;
 use PHPUnit\Framework\TestCase;
 
 /**

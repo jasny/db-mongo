@@ -1,9 +1,12 @@
-<?php declare(strict_types=1);
+<?php
 
-namespace Jasny\DB\Mongo\QueryBuilder;
+declare(strict_types=1);
+
+namespace Jasny\DB\Mongo\QueryBuilder\Finalize;
 
 use Improved\IteratorPipeline\Pipeline;
-use Jasny\DB\Exception\InvalidOptionException;
+use Jasny\DB\FieldMap\FieldMapInterface;
+use Jasny\DB\Mongo\Query\QueryInterface;
 use Jasny\DB\Option\FieldsOption;
 use Jasny\DB\Option\LimitOption;
 use Jasny\DB\Option\OptionInterface;
@@ -12,38 +15,38 @@ use Jasny\DB\Option\SortOption;
 /**
  * Convert a query opts to a MongoDB options.
  */
-class OptionConverter
+class ApplyOptions
 {
+    protected ?FieldMapInterface $fieldMap;
+
     /**
-     * Convert a query opts to a MongoDB options.
-     *
-     * @param OptionInterface[] $opts
-     * @return array<string, mixed>
-     * @throws InvalidOptionException
+     * OptionConverter constructor.
+     * @param FieldMapInterface|null $fieldMap
      */
-    public function convert(array $opts): array
+    public function __construct(?FieldMapInterface $fieldMap = null)
     {
-        return Pipeline::with($opts)
-            ->map(\Closure::fromCallable([$this, 'convertOpt']))
-            ->flatten(true)
-            ->group(fn($_, string $key) => $key)
-            ->map(function ($grouped) {
-                return array_reduce($grouped, function ($carry, $item) {
-                    return is_array($carry) && is_array($item) ? array_merge($carry, $item) : $item;
-                }, null);
-            })
-            ->toArray();
+        $this->fieldMap = $fieldMap;
     }
 
     /**
-     * Alias of `convert()`
+     * Convert a query opts to a MongoDB options.
      *
+     * @param QueryInterface    $query
      * @param OptionInterface[] $opts
-     * @return array<string, mixed>
      */
-    final public function __invoke(array $opts): array
+    public function __invoke(QueryInterface $query, array $opts): void
     {
-        return $this->convert($opts);
+        Pipeline::with($opts)
+            ->map(\Closure::fromCallable([$this, 'convertOpt']))
+            ->flatten(true)
+            ->group(fn($_, string $key) => $key)
+            ->map(fn($grouped) => array_reduce($grouped, function ($carry, $item) {
+                return is_array($carry) && is_array($item) ? array_merge($carry, $item) : $item;
+            }, null))
+            ->apply(function ($value, string $name) use ($query) {
+                $query->setOption($name, $value);
+            })
+            ->walk();
     }
 
 
@@ -51,8 +54,7 @@ class OptionConverter
      * Convert a standard Jasny DB opt to a MongoDB option.
      *
      * @param OptionInterface $opt
-     * @return array<string, int>
-     * @throws InvalidOptionException
+     * @return array<string, mixed>
      */
     protected function convertOpt(OptionInterface $opt): array
     {
@@ -67,8 +69,6 @@ class OptionConverter
         if ($opt instanceof LimitOption) {
             return ['limit' => $opt->getLimit()] + ($opt->getOffset() !== 0 ? ['skip' => $opt->getOffset()] : []);
         }
-
-        throw new InvalidOptionException(sprintf("Unsupported query option class '%s'", get_class($opt)));
     }
 
     /**
@@ -81,9 +81,10 @@ class OptionConverter
     protected function convertFields(array $fields, bool $negate = false): array
     {
         $projection = Pipeline::with($fields)
-            ->typeCheck('string', new InvalidOptionException())
+            ->typeCheck('string', new \UnexpectedValueException())
             ->flip()
             ->fill($negate ? 0 : 1)
+            ->then(fn($iterator) => $this->fieldMap !== null ? ($this->fieldMap)($iterator) : $iterator)
             ->toArray();
 
         return ['projection' => $projection];
@@ -93,15 +94,16 @@ class OptionConverter
      * Convert sort opt to MongoDB sort option.
      *
      * @param string[] $fields
-     * @return array{sort => array<string, int>}
+     * @return array{sort:array<string, int>}
      */
     protected function convertSort(array $fields): array
     {
         $sort = Pipeline::with($fields)
-            ->typeCheck('string', new InvalidOptionException())
+            ->typeCheck('string', new \UnexpectedValueException())
             ->flip()
             ->map(fn($_, string $field) => ($field[0] === '~' ? -1 : 1))
             ->mapKeys(fn(int $asc, string $field) => ($asc < 0 ? substr($field, 1) : $field))
+            ->then(fn($iterator) => $this->fieldMap !== null ? ($this->fieldMap)($iterator) : $iterator)
             ->toArray();
 
         return ['sort' => $sort];

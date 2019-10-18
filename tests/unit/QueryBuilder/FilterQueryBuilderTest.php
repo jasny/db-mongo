@@ -2,8 +2,8 @@
 
 namespace Jasny\DB\Mongo\Tests\QueryBuilder;
 
+use Jasny\DB\Mongo\QueryBuilder\FilterQuery;
 use Jasny\DB\Mongo\QueryBuilder\FilterQueryBuilder;
-use Jasny\DB\Mongo\QueryBuilder\Query;
 use Jasny\DB\Option as opt;
 use Jasny\DB\QueryBuilder\StagedQueryBuilder;
 use MongoDB\BSON;
@@ -19,13 +19,13 @@ class FilterQueryBuilderTest extends TestCase
         $builder = new FilterQueryBuilder();
         $this->assertInstanceOf(StagedQueryBuilder::class, $builder);
 
-        /** @var Query $query */
+        /** @var FilterQuery $query */
         $query = $builder->buildQuery(
             ['id' => 12, 'status' => 'good', 'info.name(not)' => 'John', 'date(min)' => new \DateTime('2000-01-01')],
             [opt\omit('bio'), opt\limit(1)]
         );
 
-        $this->assertInstanceOf(Query::class, $query);
+        $this->assertInstanceOf(FilterQuery::class, $query);
 
         $expected = [
             '_id' => 12,
