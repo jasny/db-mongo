@@ -1,11 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Write\Traits;
+namespace Jasny\DB\Mongo\Traits;
 
 use Jasny\DB\Exception\BuildQueryException;
 use Jasny\DB\Mongo\Query\FilterQuery;
 use Jasny\DB\Option\OptionInterface;
-use Jasny\DB\QueryBuilder\FilterQueryBuilder;
 use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\Result\Result;
 use MongoDB\Collection;
@@ -15,34 +14,17 @@ use MongoDB\Collection;
  */
 trait DeleteTrait
 {
+    protected QueryBuilderInterface $queryBuilder;
+
     /**
      * Get MongoDB collection object.
      */
     abstract public function getStorage(): Collection;
 
     /**
-     * Get the query builder of updating items.
-     *
-     * @return QueryBuilderInterface
+     * Create a result.
      */
-    public function getDeleteQueryBuilder(): QueryBuilderInterface
-    {
-        $this->deleteQueryBuilder = (new FilterQueryBuilder());
-
-        return $this->updateQueryBuilder;
-    }
-
-    /**
-     * Create a write with a custom query builder for save.
-     *
-     * @param QueryBuilderInterface $builder
-     * @return static
-     */
-    public function withUpdateQueryBuilder(QueryBuilderInterface $builder): self
-    {
-        return $this->with('updateQueryBuilder', $builder);
-    }
-
+    abstract protected function createResult(iterable $cursor, array $meta = []): Result;
 
     /**
      * Query and delete records.
@@ -56,7 +38,7 @@ trait DeleteTrait
     public function delete(array $filter, array $opts = []): Result
     {
         $query = new FilterQuery('delete');
-        $this->getQueryBuilder()->apply($query, $filter, $opts);
+        $this->queryBuilder->apply($query, $filter, $opts);
 
         $method = $query->getExpectedMethod('deleteOne', 'deleteMany');
         $mongoFilter = $query->toArray();

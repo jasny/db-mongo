@@ -15,6 +15,13 @@ interface QueryInterface
     public function getMethod(): string;
 
     /**
+     * Get the query method if it's one of the expected methods.
+     *
+     * @throws \UnexpectedValueException
+     */
+    public function getExpectedMethod(string ...$expected): string;
+
+    /**
      * Set the query method.
      */
     public function setMethod(string $method): void;

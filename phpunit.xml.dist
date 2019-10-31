@@ -25,6 +25,6 @@
     </logging>
 
     <php>
-        <const name="PHPUNIT_FUNCTIONAL_DEBUG" value="off"/>
+        <const name="PHPUNIT_FUNCTIONAL_DEBUG" value="on"/>
     </php>
 </phpunit>

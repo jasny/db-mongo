@@ -12,8 +12,6 @@ use Jasny\DB\Mongo\Query\UpdateQuery;
  */
 class UpdateComposer
 {
-    use Traits\FlattenFieldsTrait;
-
     /**
      * Invoke the composer.
      */
@@ -44,7 +42,7 @@ class UpdateComposer
             case 'set':
                 return ['$set' => [$field => $value]];
             case 'patch':
-                return ['$set' => $this->flattenFields($value, $field)];
+                return ['$set' => flatten_fields($value, $field)];
             case 'inc':
                 i\type_check($value, ['int', 'float'], new \UnexpectedValueException());
                 return ['$inc' => [$field => $value]];

@@ -10,7 +10,7 @@ use Jasny\DB\Mongo\QueryBuilder\FilterQueryBuilder;
 use Jasny\DB\Mongo\QueryBuilder\SaveQueryBuilder;
 use Jasny\DB\Mongo\QueryBuilder\UpdateQueryBuilder;
 use Jasny\DB\Mongo\Result\ResultBuilder;
-use Jasny\DB\Mongo\Write\Writer;
+use Jasny\DB\Mongo\Traits\Writer;
 use Jasny\DB\Option as opt;
 use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\Result;
@@ -23,10 +23,10 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\Write\Writer
- * @covers \Jasny\DB\Mongo\Write\Traits\SaveTrait
- * @covers \Jasny\DB\Mongo\Write\Traits\UpdateTrait
- * @covers \Jasny\DB\Mongo\Write\Traits\DeleteTrait
+ * @covers \Jasny\DB\Mongo\Traits\Writer
+ * @covers \Jasny\DB\Mongo\Traits\Traits\SaveTrait
+ * @covers \Jasny\DB\Mongo\Traits\Traits\UpdateTrait
+ * @covers \Jasny\DB\Mongo\Traits\Traits\DeleteTrait
  */
 class MongoWriterTest extends TestCase
 {

@@ -64,6 +64,19 @@ class WriteQuery implements QueryInterface
         return $this->index;
     }
 
+
+    /**
+     * Loop through all operations, replacing them with the return value of the callback
+     *
+     * @param callable $callable
+     */
+    public function map(callable $callable): void
+    {
+        foreach ($this->operations as &$operation) {
+            $operation = $callable($operation);
+        }
+    }
+
     /**
      * Add a bulk write operation. Arguments depend on the operation;
      *
@@ -77,14 +90,9 @@ class WriteQuery implements QueryInterface
      * @param string $operation
      * @param mixed  ...$args
      */
-    public function add(string $operation, ...$args): void
+    final public function add(string $operation, ...$args): void
     {
-        if (!in_array($operation, static::SUPPORTED_OPERATIONS, true)) {
-            throw new \InvalidArgumentException("Unsupported bulk write operation '$operation'");
-        }
-
-        $this->operations[] = [$operation => $args];
-        $this->index[] = $key ?? array_key_last($this->operations);
+        $this->addIndexed(null, $operation, ...$args);
     }
 
     /**
@@ -101,14 +109,12 @@ class WriteQuery implements QueryInterface
         }
 
         $this->operations[] = [$operation => $args];
-        $this->index[] = $key;
+        $this->index[] = $key ?? array_key_last($this->operations);
     }
 
 
     /**
      * Get the write operation.
-     *
-     * @throws \BadMethodCallException
      */
     public function getMethod(): string
     {
@@ -124,6 +130,16 @@ class WriteQuery implements QueryInterface
     {
         throw new \LogicException("Unable to set method to '$method'. "
             . "The save query method is determined based on the operations.");
+    }
+
+    /**
+     * Get the query method if it's one of the expected methods.
+     *
+     * @throws \LogicException
+     */
+    public function getExpectedMethod(string ...$expected): string
+    {
+        throw new \LogicException("Use WriteQuery::expectedMethods() instead.");
     }
 
     /**

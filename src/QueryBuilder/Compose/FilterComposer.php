@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\QueryBuilder\Compose;
 
-use Improved as i;
-use Jasny\DB\Exception\InvalidFilterException;
+use Jasny\DB\Filter\FilterItem;
 use Jasny\DB\Mongo\Query\FilterQuery;
+use Jasny\DB\Option\OptionInterface;
 
 /**
- * Standard compose step for filter query.
+ * Standard logic to apply a filter item to a query.
  */
 class FilterComposer
 {
@@ -28,32 +28,14 @@ class FilterComposer
 
     /**
      * Invoke the composer.
-     */
-    public function __invoke(iterable $iterable): \Generator
-    {
-        $callback = \Closure::fromCallable([$this, 'apply']);
-        $exception = new \UnexpectedValueException("Excepted keys to be an array; %s given");
-
-        foreach ($iterable as $info => $value) {
-            i\type_check($info, 'array', $exception);
-            $info['value'] = $value;
-
-            yield $info => $callback;
-        }
-    }
-
-    /**
-     * Default logic to apply a filter criteria.
      *
-     * @param FilterQuery $query
-     * @param string      $field
-     * @param string      $operator
-     * @param mixed       $value
-     * @return void
+     * @param FilterQuery       $query
+     * @param FilterItem        $filterItem
+     * @param OptionInterface[] $options
      */
-    public function apply($query, string $field, string $operator, $value): void
+    public function __invoke(FilterQuery $query, FilterItem $filterItem, array $options): void
     {
-        i\type_check($query, FilterQuery::class);
+        [$field, $operator, $value] = [$filterItem->getField(), $filterItem->getOperator(), $filterItem->getValue()];
 
         if (!array_key_exists($operator, static::OPERATORS)) {
             throw new \UnexpectedValueException("Unsupported filter '{$operator}' operator for '{$field}'");

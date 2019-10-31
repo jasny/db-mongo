@@ -2,15 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Write\Traits;
+namespace Jasny\DB\Mongo\Traits;
 
 use Improved as i;
 use Jasny\DB\Exception\BuildQueryException;
 use Jasny\DB\Mongo\Query\WriteQuery;
-use Jasny\DB\Mongo\QueryBuilder\SaveQueryBuilder;
 use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\QueryBuilder\QueryBuilderInterface;
-use Jasny\DB\QueryBuilder\StagedQueryBuilder;
 use Jasny\DB\Result\Result;
 use Jasny\DB\Result\ResultBuilder;
 use MongoDB\BulkWriteResult;
@@ -26,36 +24,12 @@ trait SaveTrait
     /**
      * Get MongoDB collection object.
      */
-    abstract public function getStorage(): Collection;
+    abstract public function getCollection(): Collection;
 
     /**
-     * Get the result builder.
+     * Create a result.
      */
-    abstract public function getResultBuilder(): ResultBuilder;
-
-
-    /**
-     * Get the query builder for saving new items
-     *
-     * @return QueryBuilderInterface|StagedQueryBuilder
-     */
-    public function getSaveQueryBuilder(): QueryBuilderInterface
-    {
-        $this->saveQueryBuilder ??= new SaveQueryBuilder();
-
-        return $this->saveQueryBuilder;
-    }
-
-    /**
-     * Create a write with a custom query builder for save.
-     *
-     * @param QueryBuilderInterface $builder
-     * @return static
-     */
-    public function withSaveQueryBuilder(QueryBuilderInterface $builder): self
-    {
-        return $this->with('saveQueryBuilder', $builder);
-    }
+    abstract protected function createResult(iterable $cursor, array $meta = []): Result;
 
 
     /**
@@ -79,12 +53,11 @@ trait SaveTrait
      * @param iterable          $items
      * @param OptionInterface[] $opts
      * @return Result
-     * @throws BuildQueryException
      */
     public function saveAll(iterable $items, array $opts = []): Result
     {
         $query = new WriteQuery(['ordered' => false]);
-        $this->getSaveQueryBuilder()->apply($query, $items, $opts);
+        $this->saveQueryBuilder->apply($query, $items, $opts);
 
         $query->expectMethods('insertOne', 'replaceOne', 'updateOne');
         $mongoOperations = $query->getOperations();
@@ -92,13 +65,13 @@ trait SaveTrait
 
         $this->debug("%s.bulkWrite", ['operations' => $mongoOperations, 'options' => $mongoOptions]);
 
-        $writeResult = $this->getStorage()->bulkWrite($mongoOperations, $mongoOptions);
+        $writeResult = $this->getCollection()->bulkWrite($mongoOperations, $mongoOptions);
 
         return $this->createSaveResult($query->getIndex(), $writeResult);
     }
 
     /**
-     * Aggregate the meta from multiple bulk write actions
+     * Aggregate the meta from multiple bulk write actions.
      *
      * @param array           $index
      * @param BulkWriteResult $writeResult
@@ -109,7 +82,8 @@ trait SaveTrait
         $meta = [];
 
         if ($writeResult->isAcknowledged()) {
-            $meta['count'] = $writeResult->getInsertedCount() + (int)$writeResult->getModifiedCount()
+            $meta['count'] = $writeResult->getInsertedCount()
+                + (int)$writeResult->getModifiedCount()
                 + $writeResult->getUpsertedCount();
             $meta['matched'] = $writeResult->getMatchedCount();
             $meta['inserted'] = $writeResult->getInsertedCount();
@@ -119,10 +93,9 @@ trait SaveTrait
         $ids = $writeResult->getInsertedIds()
             + $writeResult->getUpsertedIds()
             + array_fill(0, count($index), null);
+
         $documents = i\iterable_map($ids, fn($id) => ($id === null ? [] : ['_id' => $id]));
 
-        return $this->getResultBuilder()
-            ->with($documents, $meta)
-            ->setKeys($index);
+        return $this->createResult($documents, $meta)->setKeys($index);
     }
 }

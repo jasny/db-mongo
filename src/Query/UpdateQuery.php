@@ -10,13 +10,23 @@ use Improved\IteratorPipeline\Pipeline;
  * Representation of a MongoDB update query.
  * This object is mutable, as it's uses as accumulator by the query builders.
  */
-class UpdateQuery extends AbstractQuery
+class UpdateQuery implements QueryInterface
 {
     protected FilterQuery $filterQuery;
 
     /** @var array<int, array<string, array>> */
     protected array $statements = [];
 
+    /** @var array<string, mixed> */
+    protected array $options;
+
+    /**
+     * Query constructor.
+     */
+    public function __construct(FilterQuery $filterQuery)
+    {
+        $this->filterQuery = $filterQuery;
+    }
 
     /**
      * Get the filter part of the update query
@@ -25,6 +35,54 @@ class UpdateQuery extends AbstractQuery
     {
         return $this->filterQuery;
     }
+
+
+    /**
+     * Get the query method.
+     */
+    public function getMethod(): string
+    {
+        return $this->filterQuery->getMethod();
+    }
+
+    /**
+     * Get the query method if it's one of the expected methods.
+     *
+     * @throws \UnexpectedValueException
+     */
+    public function getExpectedMethod(string ...$expected): string
+    {
+        return $this->filterQuery->getExpectedMethod(...$expected);
+    }
+
+    /**
+     * Set the query method.
+     */
+    public function setMethod(string $method): void
+    {
+        $this->filterQuery->setMethod($method);
+    }
+
+
+    /**
+     * Get MongoDB query options.
+     */
+    public function getOptions(): array
+    {
+        return $this->options;
+    }
+
+    /**
+     * Set MongoDB specific query option.
+     *
+     * @param string $name
+     * @param mixed $value
+     */
+    public function setOption(string $name, $value): void
+    {
+        $this->options[$name] = $value;
+    }
+
 
     /**
      * Add a statement to the query.

@@ -17,15 +17,14 @@ use Jasny\DB\Option\SortOption;
  */
 class ApplyOptions
 {
-    protected ?FieldMapInterface $fieldMap;
+    protected FieldMapInterface $map;
 
     /**
      * OptionConverter constructor.
-     * @param FieldMapInterface|null $fieldMap
      */
-    public function __construct(?FieldMapInterface $fieldMap = null)
+    public function __construct(FieldMapInterface $map)
     {
-        $this->fieldMap = $fieldMap;
+        $this->map = $map;
     }
 
     /**
@@ -69,6 +68,8 @@ class ApplyOptions
         if ($opt instanceof LimitOption) {
             return ['limit' => $opt->getLimit()] + ($opt->getOffset() !== 0 ? ['skip' => $opt->getOffset()] : []);
         }
+
+        return [];
     }
 
     /**
@@ -84,8 +85,12 @@ class ApplyOptions
             ->typeCheck('string', new \UnexpectedValueException())
             ->flip()
             ->fill($negate ? 0 : 1)
-            ->then(fn($iterator) => $this->fieldMap !== null ? ($this->fieldMap)($iterator) : $iterator)
+            ->mapKeys(fn($_, string $field) => $this->map->toDB($field))
             ->toArray();
+
+        if (!$negate && !isset($projection['_id'])) {
+            $projection['_id'] = 0; // MongoDB returns `_id` when unspecified.
+        }
 
         return ['projection' => $projection];
     }
@@ -103,7 +108,7 @@ class ApplyOptions
             ->flip()
             ->map(fn($_, string $field) => ($field[0] === '~' ? -1 : 1))
             ->mapKeys(fn(int $asc, string $field) => ($asc < 0 ? substr($field, 1) : $field))
-            ->then(fn($iterator) => $this->fieldMap !== null ? ($this->fieldMap)($iterator) : $iterator)
+            ->mapKeys(fn($_, string $field) => $this->map->toDB($field))
             ->toArray();
 
         return ['sort' => $sort];
