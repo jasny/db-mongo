@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace Jasny\DB\Mongo\Traits;
 
 use Improved as i;
-use Jasny\DB\Exception\BuildQueryException;
 use Jasny\DB\Mongo\Query\WriteQuery;
+use Jasny\DB\Option as opts;
 use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\Result\Result;
-use Jasny\DB\Result\ResultBuilder;
 use MongoDB\BulkWriteResult;
 use MongoDB\Collection;
+use UnexpectedValueException;
+use function Jasny\object_set_properties;
 
 /**
  * Save data to a MongoDB collection.
@@ -67,14 +68,21 @@ trait SaveTrait
 
         $writeResult = $this->getCollection()->bulkWrite($mongoOperations, $mongoOptions);
 
-        return $this->createSaveResult($query->getIndex(), $writeResult);
+        $result = $this->createSaveResult($query->getIndex(), $writeResult);
+
+        if (opts\apply_result()->isIn($opts)) {
+            /** @var array $items */
+            $result = $result->applyTo($items);
+        }
+
+        return $result;
     }
 
     /**
      * Aggregate the meta from multiple bulk write actions.
      *
-     * @param array           $index
-     * @param BulkWriteResult $writeResult
+     * @param array             $index
+     * @param BulkWriteResult   $writeResult
      * @return Result
      */
     protected function createSaveResult(array $index, BulkWriteResult $writeResult): Result
@@ -94,6 +102,7 @@ trait SaveTrait
             + $writeResult->getUpsertedIds()
             + array_fill(0, count($index), null);
 
+        // Turn id values into arrays before mapping is applied.
         $documents = i\iterable_map($ids, fn($id) => ($id === null ? [] : ['_id' => $id]));
 
         return $this->createResult($documents, $meta)->setKeys($index);

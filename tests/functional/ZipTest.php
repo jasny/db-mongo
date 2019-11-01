@@ -11,8 +11,6 @@ use Jasny\DB\Mongo\Query\FilterQuery;
 use Jasny\DB\Mongo\Reader;
 use Jasny\DB\Mongo\Writer;
 use Jasny\DB\Option as opts;
-use Jasny\DB\QueryBuilder\FilterQueryBuilder;
-use Jasny\DB\Result\ResultBuilder;
 use MongoDB\BSON\ObjectId;
 use MongoDB\Client;
 use MongoDB\Collection;
@@ -21,6 +19,7 @@ use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
+use function Jasny\array_without;
 
 /**
  * Test against the zips collection.
@@ -54,7 +53,7 @@ class ZipTest extends TestCase
             $this->cloneCollection(); // Only clone if data is changed as cloning slows down the tests.
         }
 
-        $this->logger = constant('PHPUNIT_FUNCTIONAL_DEBUG') === 'on'
+        $this->logger = getenv('FUNCTIONAL_TESTS_DEBUG') === 'on'
             ? new Logger('MongoDB', [new StreamHandler(STDERR)])
             : new Logger('MongoDB', [new NullHandler()]);
 
@@ -141,7 +140,8 @@ class ZipTest extends TestCase
             );
 
         $this->reader = (new Reader($queryBuilder, $this->reader->getResultBuilder()))
-            ->forCollection($this->collection);
+            ->forCollection($this->collection)
+            ->withLogging($this->logger);
 
         $filter = ['loc(near)' => [-72.622739, 42.070206]];
 
@@ -165,7 +165,7 @@ class ZipTest extends TestCase
             'state' => 'area'
         ]);
 
-        $this->reader = Reader::basic($fieldMap)->forCollection($this->collection);
+        $this->reader = Reader::basic($fieldMap)->forCollection($this->collection)->withLogging($this->logger);
 
         $result = $this->reader->fetch(
             ['area' => "NY"],
@@ -182,17 +182,14 @@ class ZipTest extends TestCase
     public function testSaveAll()
     {
         $locations = [
-            ["id" => "90208", "city" => "BLUE HILLS", "loc" => [-118.406477, 34.092], "state" => "CA"],
-            ["id" => "90209", "city" => "BLUE HILLS", "loc" => [-118.407, 34.0], "pop" => 99, "state" => "CA"],
+            'a' => ["id" => "90208", "city" => "BLUE HILLS", "loc" => [-118.406477, 34.092], "state" => "CA"],
+            '2' => ["id" => "90209", "city" => "BLUE HILLS", "loc" => [-118.407, 34.0], "pop" => 99, "state" => "CA"],
         ];
 
-        $index = 0;
         $result = $this->writer->saveAll($locations);
 
-        foreach ($result as $i => $document) {
-            $location = $locations[$i];
-            //$this->assertEquals($locations[$index++], $location);
-            //$this->assertEquals(['id' => $location['id']], $document);
+        foreach ($result as $key => $document) {
+            $location = $locations[$key];
 
             $expected = ['_id' => $location['id']] + array_diff_key($location, ['id' => 0]);
             $this->assertInMongoCollection($expected, $document['id']);
@@ -204,24 +201,21 @@ class ZipTest extends TestCase
      */
     public function testSaveAllWithGeneratedIds()
     {
-        $this->markTestSkipped();
-
         $locations = [
-            ["city" => "BLUE HILLS", "loc" => [-118.406477, 34.092], "state" => "CA"],
-            ["city" => "BLUE HILLS", "loc" => [-118.407, 34.0], "pop" => 99, "state" => "CA"],
+            'a' => (object)["city" => "BLUE HILLS", "loc" => [-118.406477, 34.092], "state" => "CA"],
+            '2'  => (object)["city" => "BLUE HILLS", "loc" => [-118.407, 34.0], "pop" => 99, "state" => "CA"],
         ];
 
-        $index = 0;
-        $result = $this->writer->saveAll($locations);
+        $result = $this->writer->saveAll($locations, [opts\apply_result()]);
 
-        foreach ($result as $location => $document) {
-            $this->assertSame(['id'], array_keys($document));
-            $this->assertInstanceOf(ObjectId::class, $document['id']);
+        foreach ($result as $key => $location) {
+            $this->assertArrayHasKey($key, $locations);
+            $this->assertSame($locations[$key], $location);
+            $this->assertObjectHasAttribute('id', $location);
+            $this->assertInstanceOf(ObjectId::class, $location->id);
 
-            $this->assertEquals($locations[$index++], $location);
-
-            $expected = ['_id' => $document['id']] + $location;
-            $this->assertInMongoCollection($expected, $document['id']);
+            $expected = ['_id' => $location->id] + array_diff_key((array)$location, ['id' => 0]);
+            $this->assertInMongoCollection($expected, $location->id);
         }
     }
 
@@ -230,40 +224,37 @@ class ZipTest extends TestCase
      */
     public function testSaveAllWithCustomFieldMap()
     {
-        $this->markTestSkipped();
-
         $fieldMap = new ConfiguredFieldMap([
-            '_id' => 'id',
+            '_id' => 'ref',
             'city' => 'city',
             'loc' => 'latlon',
             'state' => 'area'
         ]);
 
-        $this->writer = $this->writer
-            ->withSaveQueryBuilder(new SaveQueryBuilder($fieldMap))
-            ->withResultBuilder(new ResultBuilder($fieldMap));
+        $this->writer = Writer::basic($fieldMap)->forCollection($this->collection)->withLogging($this->logger);
 
         $locations = [
-            ["city" => "BLUE HILLS", "latlon" => [-118.406477, 34.092], "area" => "CA"],
-            ["city" => "BLUE HILLS", "latlon" => [-118.407, 34.0], "pop" => 99, "area" => "CA", "bar" => 'r'],
+            'a' => (object)["city" => "BLUE HILLS", "latlon" => [-118.406477, 34.092], "area" => "CA"],
+            '2' => (object)["city" => "BLUE HILLS", "latlon" => [-118.407, 34.0], "pop" => 99, "area" => "CA",
+                "bar" => 'r'],
         ];
 
-        $index = 0;
-        $result = $this->writer->saveAll($locations);
+        $result = $this->writer->saveAll($locations, [opts\apply_result()]);
 
-        foreach ($result as $location => $document) {
-            $this->assertSame(['id'], array_keys($document));
-            $this->assertInstanceOf(ObjectId::class, $document['id']);
-
-            $this->assertEquals($locations[$index++], $location);
+        foreach ($result as $key => $location) {
+            $this->assertArrayHasKey($key, $locations);
+            $this->assertSame($locations[$key], $location);
+            $this->assertObjectHasAttribute('ref', $location);
+            $this->assertInstanceOf(ObjectId::class, $location->ref);
 
             $expected = [
-                '_id' => $document['id'],
-                'city' => $location['city'],
-                'loc' => $location['latlon'],
-                'state' => $location['area'],
-            ];
-            $this->assertInMongoCollection($expected, $document['id']);
+                '_id' => $location->ref,
+                'city' => $location->city,
+                'loc' => $location->latlon,
+                'state' => $location->area,
+            ] + array_without((array)$location, ['ref', 'city', 'latlon', 'area']);
+
+            $this->assertInMongoCollection($expected, $location->ref);
         }
     }
 
