@@ -36,14 +36,17 @@ trait UpdateTrait
     /**
      * Query and update records.
      *
-     * @param array               $filter
-     * @param UpdateInstruction[] $update
-     * @param OptionInterface[]   $opts
+     * @param array                                 $filter
+     * @param UpdateInstruction|UpdateInstruction[] $update
+     * @param OptionInterface[]                     $opts
      * @return Result
-     * @throws BuildQueryException
      */
-    public function update(array $filter, array $update, array $opts = []): Result
+    public function update(array $filter, $update, array $opts = []): Result
     {
+        if ($update instanceof UpdateInstruction) {
+            $update = [$update];
+        }
+
         $filterQuery = new FilterQuery('update');
         $updateQuery = new UpdateQuery($filterQuery);
 

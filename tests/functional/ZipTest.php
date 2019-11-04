@@ -11,6 +11,7 @@ use Jasny\DB\Mongo\Query\FilterQuery;
 use Jasny\DB\Mongo\Reader;
 use Jasny\DB\Mongo\Writer;
 use Jasny\DB\Option as opts;
+use Jasny\DB\Update as update;
 use MongoDB\BSON\ObjectId;
 use MongoDB\Client;
 use MongoDB\Collection;
@@ -258,6 +259,26 @@ class ZipTest extends TestCase
         }
     }
 
+
+    /**
+     * @group write
+     */
+    public function testUpdate()
+    {
+        $this->writer->update(["_id" => "10004"], update\set(["city" => "NEW YORK"]));
+
+        $expected = [
+            '_id' => "10004",
+            'city' => "NEW YORK",
+            'loc' => [-74.019025, 40.693604],
+            'pop' => 3593,
+            'state' => "NY",
+        ];
+
+        $this->assertInMongoCollection($expected, "10004");
+    }
+
+
     protected function assertInMongoCollection($expected, $id)
     {
         $found = $this->collection->findOne(['_id' => $id]);
@@ -268,5 +289,11 @@ class ZipTest extends TestCase
         }
 
         $this->assertEquals($expected, $found);
+    }
+
+    protected function assertNotInMongoCollection($id)
+    {
+        $found = $this->collection->findOne(['_id' => $id]);
+        $this->assertNull($found);
     }
 }

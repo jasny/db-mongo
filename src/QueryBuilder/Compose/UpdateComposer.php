@@ -5,77 +5,62 @@ declare(strict_types=1);
 namespace Jasny\DB\Mongo\QueryBuilder\Compose;
 
 use Improved as i;
+use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Mongo\Query\UpdateQuery;
+use Jasny\DB\Option\OptionInterface;
+use Jasny\DB\Update\UpdateInstruction;
+use function Jasny\DB\Mongo\flatten_fields;
 
 /**
  * Standard compose step for update query.
  */
 class UpdateComposer
 {
-    /**
-     * Invoke the composer.
+    /**`
+     * Default logic to apply a filter criteria.
+     *
+     * @param UpdateQuery       $query
+     * @param UpdateInstruction $instruction
+     * @param OptionInterface[] $opts
+     * @throws \InvalidArgumentException
      */
-    public function __invoke(iterable $iterable): \Generator
+    public function __invoke(UpdateQuery $query, UpdateInstruction $instruction, array $opts): void
     {
-        $callback = \Closure::fromCallable([$this, 'apply']);
-        $exception = new \UnexpectedValueException("Excepted keys to be an array; %s given");
-
-        foreach ($iterable as $info => $value) {
-            i\type_check($info, 'array', $exception);
-            $info['value'] = $value;
-
-            yield $info => $callback;
-        }
+        $operation = $this->getOperation($instruction->getOperator(), $instruction->getPairs());
+        $query->add($operation);
     }
 
     /**
      * Get the query operation.
      *
-     * @param string $field
      * @param string $operator
-     * @param mixed $value
+     * @param array  $value
      * @return array
      */
-    protected function getOperation(string $field, string $operator, $value): array
+    protected function getOperation(string $operator, array $pairs): array
     {
+        $numPairs = in_array($operator, ['inc', 'mul', 'div'])
+            ? Pipeline::with($pairs)->typeCheck(['int', 'float'], new \UnexpectedValueException())
+            : null;
+
         switch ($operator) {
             case 'set':
-                return ['$set' => [$field => $value]];
+                return ['$set' => $pairs];
             case 'patch':
-                return ['$set' => flatten_fields($value, $field)];
+                return ['$set' => flatten_fields($pairs)];
             case 'inc':
-                i\type_check($value, ['int', 'float'], new \UnexpectedValueException());
-                return ['$inc' => [$field => $value]];
+                return ['$inc' => $numPairs->toArray()];
             case 'mul':
-                i\type_check($value, ['int', 'float'], new \UnexpectedValueException());
-                return ['$mul' => [$field => $value]];
+                return ['$mul' => $numPairs->toArray()];
             case 'div':
-                i\type_check($value, ['int', 'float'], new \UnexpectedValueException());
-                return ['$mul' => [$field => 1 / (float)$value]];
+                return ['$mul' => $numPairs->map(fn($value) => 1 / (float)$value)->toArray()];
             case 'push':
-                return ['$push' => [$field => ['$each' => $value]]];
+                return ['$push' => Pipeline::with($pairs)->map(fn($value) => ['$each' => $value])->toArray()];
             case 'pull':
-                return ['$pullAll' => [$field => $value]];
+                return ['$pullAll' => $pairs];
 
             default:
                 throw new \UnexpectedValueException("Unsupported update operator '{$operator}' for '{$field}'");
         }
-    }
-
-    /**`
-     * Default logic to apply a filter criteria.
-     *
-     * @param UpdateQuery $query
-     * @param string      $field
-     * @param string      $operator
-     * @param mixed       $value
-     * @throws \InvalidArgumentException
-     */
-    protected function apply(UpdateQuery $query, string $field, string $operator, $value): void
-    {
-        i\type_check($query, UpdateQuery::class);
-
-        $operation = $this->getOperation($field, $operator, $value);
-        $query->add($operation);
     }
 }

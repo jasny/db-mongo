@@ -18,7 +18,7 @@ class UpdateQuery implements QueryInterface
     protected array $statements = [];
 
     /** @var array<string, mixed> */
-    protected array $options;
+    protected array $options = [];
 
     /**
      * Query constructor.
